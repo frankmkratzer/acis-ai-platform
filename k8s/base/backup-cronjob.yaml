@@ -1,0 +1,116 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: acis-ai
+  labels:
+    app: postgres-backup
+spec:
+  # Run daily at 2 AM UTC
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: postgres:14-alpine
+            env:
+            - name: PGHOST
+              value: "postgres"
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: "acis-ai"
+            - name: PGUSER
+              value: "postgres"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: acis-secrets
+                  key: postgres-password
+            - name: BACKUP_RETENTION_DAYS
+              value: "30"
+            - name: S3_BUCKET
+              value: ""  # Set if using S3
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secrets
+                  key: access-key-id
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secrets
+                  key: secret-access-key
+                  optional: true
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="acis-ai-${TIMESTAMP}.sql.gz"
+              BACKUP_PATH="/backup/${BACKUP_FILE}"
+
+              echo "Starting backup at $(date)"
+              echo "Backup file: ${BACKUP_PATH}"
+
+              # Create backup
+              pg_dump --no-owner --no-acl --clean --if-exists | gzip > "${BACKUP_PATH}"
+
+              # Verify backup
+              BACKUP_SIZE=$(stat -c%s "${BACKUP_PATH}")
+              if [ "$BACKUP_SIZE" -lt 1000 ]; then
+                echo "ERROR: Backup file is suspiciously small: ${BACKUP_SIZE} bytes"
+                exit 1
+              fi
+              echo "Backup size: ${BACKUP_SIZE} bytes"
+
+              # Upload to S3 if configured
+              if [ -n "$S3_BUCKET" ]; then
+                echo "Uploading to S3: s3://${S3_BUCKET}/backups/${BACKUP_FILE}"
+                if command -v aws &> /dev/null; then
+                  aws s3 cp "${BACKUP_PATH}" "s3://${S3_BUCKET}/backups/${BACKUP_FILE}"
+                  echo "Uploaded to S3 successfully"
+                else
+                  echo "WARNING: AWS CLI not available, skipping S3 upload"
+                fi
+              fi
+
+              # Cleanup old backups
+              echo "Cleaning up backups older than ${BACKUP_RETENTION_DAYS} days"
+              find /backup -name "acis-ai-*.sql.gz" -type f -mtime +${BACKUP_RETENTION_DAYS} -delete
+
+              echo "Backup completed successfully at $(date)"
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  namespace: acis-ai
+  labels:
+    app: postgres-backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 100Gi
