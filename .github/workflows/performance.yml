@@ -1,0 +1,251 @@
+name: Performance Testing
+
+on:
+  schedule:
+    # Run performance tests weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      users:
+        description: 'Number of concurrent users'
+        required: false
+        default: '50'
+      spawn_rate:
+        description: 'User spawn rate per second'
+        required: false
+        default: '5'
+      run_time:
+        description: 'Test duration (e.g., 5m, 1h)'
+        required: false
+        default: '5m'
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: $@nJose420
+          POSTGRES_DB: acis-ai-test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust
+
+    - name: Set up test database
+      env:
+        PGPASSWORD: '$@nJose420'
+      run: |
+        psql -h localhost -U postgres -d acis-ai-test -f database/create_rl_trading_tables.sql || echo "Setup complete"
+
+    - name: Start backend server
+      env:
+        DATABASE_URL: postgresql://postgres:$@nJose420@localhost:5432/acis-ai-test
+        REDIS_URL: redis://localhost:6379/0
+        ENVIRONMENT: test
+      run: |
+        cd backend/api
+        uvicorn main:app --host 0.0.0.0 --port 8000 &
+        echo $! > backend.pid
+
+        # Wait for server to be ready
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/health; then
+            echo "Backend is ready"
+            break
+          fi
+          echo "Waiting for backend... ($i/30)"
+          sleep 2
+        done
+
+    - name: Run performance tests
+      run: |
+        locust -f tests/performance/locustfile.py \
+          --host=http://localhost:8000 \
+          --users ${{ github.event.inputs.users || '50' }} \
+          --spawn-rate ${{ github.event.inputs.spawn_rate || '5' }} \
+          --run-time ${{ github.event.inputs.run_time || '5m' }} \
+          --headless \
+          --html performance-report.html \
+          --csv performance-results
+
+    - name: Parse performance results
+      if: always()
+      run: |
+        echo "## Performance Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Test Configuration:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Users: ${{ github.event.inputs.users || '50' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Spawn Rate: ${{ github.event.inputs.spawn_rate || '5' }}/sec" >> $GITHUB_STEP_SUMMARY
+        echo "- Duration: ${{ github.event.inputs.run_time || '5m' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f performance-results_stats.csv ]; then
+          echo "### Request Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -20 performance-results_stats.csv >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-reports
+        path: |
+          performance-report.html
+          performance-results*.csv
+        retention-days: 90
+
+    - name: Check performance thresholds
+      if: always()
+      run: |
+        python - <<EOF
+        import csv
+        import sys
+
+        # Performance thresholds
+        MAX_AVG_RESPONSE_TIME = 2000  # ms
+        MAX_P95_RESPONSE_TIME = 5000  # ms
+        MAX_ERROR_RATE = 0.05  # 5%
+
+        failures = []
+
+        # Read stats file
+        with open('performance-results_stats.csv', 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['Type'] == 'Aggregated':
+                    avg_time = float(row['Average Response Time'])
+                    p95_time = float(row['95%'])
+                    error_rate = float(row['Failure Count']) / float(row['Request Count']) if float(row['Request Count']) > 0 else 0
+
+                    if avg_time > MAX_AVG_RESPONSE_TIME:
+                        failures.append(f"Average response time {avg_time:.0f}ms exceeds {MAX_AVG_RESPONSE_TIME}ms")
+
+                    if p95_time > MAX_P95_RESPONSE_TIME:
+                        failures.append(f"95th percentile {p95_time:.0f}ms exceeds {MAX_P95_RESPONSE_TIME}ms")
+
+                    if error_rate > MAX_ERROR_RATE:
+                        failures.append(f"Error rate {error_rate*100:.2f}% exceeds {MAX_ERROR_RATE*100}%")
+
+        if failures:
+            print("❌ Performance test FAILED:")
+            for failure in failures:
+                print(f"  - {failure}")
+            sys.exit(1)
+        else:
+            print("✅ Performance test PASSED - All thresholds met!")
+        EOF
+
+    - name: Stop backend server
+      if: always()
+      run: |
+        if [ -f backend.pid ]; then
+          kill $(cat backend.pid) || true
+        fi
+
+  performance-comparison:
+    runs-on: ubuntu-latest
+    needs: performance-test
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Download current performance report
+      uses: actions/download-artifact@v4
+      with:
+        name: performance-reports
+        path: current/
+
+    - name: Download previous performance report
+      uses: dawidd6/action-download-artifact@v3
+      continue-on-error: true
+      with:
+        workflow: performance.yml
+        name: performance-reports
+        path: previous/
+        if_no_artifact_found: warn
+
+    - name: Compare performance
+      if: success()
+      run: |
+        python - <<EOF
+        import csv
+        import os
+
+        if not os.path.exists('previous/performance-results_stats.csv'):
+            print("No previous results to compare")
+            exit(0)
+
+        # Read current and previous stats
+        def read_stats(filepath):
+            with open(filepath, 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row['Type'] == 'Aggregated':
+                        return {
+                            'avg_time': float(row['Average Response Time']),
+                            'p95_time': float(row['95%']),
+                            'requests': int(row['Request Count']),
+                            'failures': int(row['Failure Count'])
+                        }
+            return None
+
+        current = read_stats('current/performance-results_stats.csv')
+        previous = read_stats('previous/performance-results_stats.csv')
+
+        if current and previous:
+            print("## Performance Comparison")
+            print("")
+            print("| Metric | Previous | Current | Change |")
+            print("|--------|----------|---------|--------|")
+
+            # Average response time
+            avg_diff = ((current['avg_time'] - previous['avg_time']) / previous['avg_time']) * 100
+            avg_emoji = "🔴" if avg_diff > 10 else "🟢" if avg_diff < -10 else "🟡"
+            print(f"| Avg Response Time | {previous['avg_time']:.0f}ms | {current['avg_time']:.0f}ms | {avg_emoji} {avg_diff:+.1f}% |")
+
+            # 95th percentile
+            p95_diff = ((current['p95_time'] - previous['p95_time']) / previous['p95_time']) * 100
+            p95_emoji = "🔴" if p95_diff > 10 else "🟢" if p95_diff < -10 else "🟡"
+            print(f"| P95 Response Time | {previous['p95_time']:.0f}ms | {current['p95_time']:.0f}ms | {p95_emoji} {p95_diff:+.1f}% |")
+
+            # Error rate
+            prev_error_rate = (previous['failures'] / previous['requests']) * 100 if previous['requests'] > 0 else 0
+            curr_error_rate = (current['failures'] / current['requests']) * 100 if current['requests'] > 0 else 0
+            error_diff = curr_error_rate - prev_error_rate
+            error_emoji = "🔴" if error_diff > 1 else "🟢" if error_diff < -1 else "🟡"
+            print(f"| Error Rate | {prev_error_rate:.2f}% | {curr_error_rate:.2f}% | {error_emoji} {error_diff:+.2f}% |")
+        EOF

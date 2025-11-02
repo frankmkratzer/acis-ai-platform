@@ -1,0 +1,144 @@
+{
+  "dashboard": {
+    "title": "ML Trading Dashboard",
+    "tags": ["ml", "trading", "business"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "graph",
+        "title": "ML Model Prediction Latency",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(ml_prediction_duration_seconds_bucket[5m])) by (le, model))",
+            "legendFormat": "{{ model }} (p95)"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Latency"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "graph",
+        "title": "Model Prediction Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(ml_predictions_total[5m])) by (model)",
+            "legendFormat": "{{ model }}"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Predictions/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "graph",
+        "title": "Model Error Rate",
+        "targets": [
+          {
+            "expr": "(sum(rate(ml_predictions_total{status=\"error\"}[5m])) by (model) / sum(rate(ml_predictions_total[5m])) by (model)) * 100",
+            "legendFormat": "{{ model }}"
+          }
+        ],
+        "yaxes": [
+          {"format": "percent", "label": "Error Rate %"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "stat",
+        "title": "Model Age (Days)",
+        "targets": [
+          {
+            "expr": "(time() - ml_model_last_training_timestamp) / 86400",
+            "legendFormat": "{{ model }}"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "type": "graph",
+        "title": "Trade Execution Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(trades_total[5m]))",
+            "legendFormat": "Total Trades/min"
+          },
+          {
+            "expr": "sum(rate(trades_total{status=\"success\"}[5m]))",
+            "legendFormat": "Successful"
+          },
+          {
+            "expr": "sum(rate(trades_total{status=\"failed\"}[5m]))",
+            "legendFormat": "Failed"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Trades/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "type": "graph",
+        "title": "Portfolio Value",
+        "targets": [
+          {
+            "expr": "portfolio_total_value",
+            "legendFormat": "Total Value"
+          }
+        ],
+        "yaxes": [
+          {"format": "currencyUSD", "label": "Value"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+        "type": "table",
+        "title": "Portfolio Positions",
+        "targets": [
+          {
+            "expr": "portfolio_position_value",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {},
+              "renameByName": {
+                "symbol": "Symbol",
+                "Value": "Position Value"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

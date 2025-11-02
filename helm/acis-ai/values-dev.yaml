@@ -1,0 +1,88 @@
+# Development environment values
+# Overrides for local/dev Kubernetes clusters (minikube, kind, etc.)
+
+backend:
+  replicaCount: 1
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  autoscaling:
+    enabled: false
+
+  env:
+    environment: development
+    logLevel: DEBUG
+
+frontend:
+  replicaCount: 1
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  autoscaling:
+    enabled: false
+
+postgresql:
+  primary:
+    persistence:
+      size: 10Gi
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+redis:
+  master:
+    persistence:
+      size: 2Gi
+
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+ingress:
+  enabled: false
+
+monitoring:
+  prometheus:
+    persistence:
+      size: 5Gi
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+  grafana:
+    persistence:
+      size: 2Gi
+
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi

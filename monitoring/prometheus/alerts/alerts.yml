@@ -1,0 +1,337 @@
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "High API error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # High latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s (threshold: 2s)"
+
+      # API service down
+      - alert: APIServiceDown
+        expr: up{job="backend-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "API service is down"
+          description: "The backend API service has been down for more than 2 minutes"
+
+      # Too many requests
+      - alert: HighRequestRate
+        expr: |
+          sum(rate(http_requests_total[5m])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+        annotations:
+          summary: "High request rate detected"
+          description: "Request rate is {{ $value }} req/s (threshold: 1000 req/s)"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Database connection pool exhausted
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          (
+            pg_stat_database_numbackends
+            /
+            pg_settings_max_connections
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "{{ $value | humanizePercentage }} of max connections in use (threshold: 80%)"
+
+      # Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "The database has been unreachable for more than 2 minutes"
+
+      # Slow queries
+      - alert: SlowQueries
+        expr: |
+          rate(pg_stat_activity_max_tx_duration[5m]) > 10
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Long-running queries detected (> 10 seconds)"
+
+      # High database CPU
+      - alert: HighDatabaseCPU
+        expr: |
+          rate(process_cpu_seconds_total{job="postgres"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database CPU usage"
+          description: "Database CPU usage is {{ $value | humanizePercentage }}"
+
+      # Database storage running out
+      - alert: DatabaseStorageRunningOut
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/var/lib/postgresql"}
+            /
+            node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"}
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database storage running out"
+          description: "Only {{ $value | humanizePercentage }} of database storage remaining"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} (threshold: 80%)"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+          ) / node_memory_MemTotal_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 85%)"
+
+      # Disk space running out
+      - alert: DiskSpaceRunningOut
+        expr: |
+          (
+            node_filesystem_avail_bytes{fstype!="tmpfs"}
+            /
+            node_filesystem_size_bytes{fstype!="tmpfs"}
+          ) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Disk space running out"
+          description: "Only {{ $value | humanizePercentage }} of disk space remaining on {{ $labels.mountpoint }}"
+
+      # High disk I/O
+      - alert: HighDiskIO
+        expr: |
+          rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High disk I/O detected"
+          description: "Disk I/O utilization is {{ $value | humanizePercentage }}"
+
+  - name: container_alerts
+    interval: 30s
+    rules:
+      # Container CPU throttling
+      - alert: ContainerCPUThrottling
+        expr: |
+          rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "Container CPU throttling detected"
+          description: "Container {{ $labels.name }} is being CPU throttled"
+
+      # Container memory limit reached
+      - alert: ContainerMemoryLimitReached
+        expr: |
+          (
+            container_memory_usage_bytes
+            /
+            container_spec_memory_limit_bytes
+          ) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+          component: container
+        annotations:
+          summary: "Container memory limit nearly reached"
+          description: "Container {{ $labels.name }} is using {{ $value | humanizePercentage }} of memory limit"
+
+      # Container restart rate
+      - alert: HighContainerRestartRate
+        expr: |
+          rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: container
+        annotations:
+          summary: "High container restart rate"
+          description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is restarting frequently"
+
+      # Pod not ready
+      - alert: PodNotReady
+        expr: |
+          kube_pod_status_phase{phase!="Running"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "Pod not ready"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is not in Running state"
+
+  - name: ml_model_alerts
+    interval: 60s
+    rules:
+      # Model prediction latency
+      - alert: HighModelPredictionLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(ml_prediction_duration_seconds_bucket[5m])) by (le, model)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: ml-model
+        annotations:
+          summary: "High ML model prediction latency"
+          description: "Model {{ $labels.model }} 95th percentile latency is {{ $value }}s (threshold: 5s)"
+
+      # Model prediction error rate
+      - alert: HighModelErrorRate
+        expr: |
+          (
+            sum(rate(ml_predictions_total{status="error"}[5m])) by (model)
+            /
+            sum(rate(ml_predictions_total[5m])) by (model)
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          component: ml-model
+        annotations:
+          summary: "High ML model error rate"
+          description: "Model {{ $labels.model }} error rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Stale model
+      - alert: StaleMLModel
+        expr: |
+          time() - ml_model_last_training_timestamp > (7 * 24 * 3600)
+        for: 1h
+        labels:
+          severity: warning
+          component: ml-model
+        annotations:
+          summary: "ML model is stale"
+          description: "Model {{ $labels.model }} hasn't been retrained in over 7 days"
+
+  - name: trading_alerts
+    interval: 60s
+    rules:
+      # Failed trades
+      - alert: HighFailedTradeRate
+        expr: |
+          (
+            sum(rate(trades_total{status="failed"}[5m]))
+            /
+            sum(rate(trades_total[5m]))
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "High failed trade rate"
+          description: "Failed trade rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Broker API unavailable
+      - alert: BrokerAPIUnavailable
+        expr: up{job="broker-api"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: trading
+        annotations:
+          summary: "Broker API is unavailable"
+          description: "Unable to connect to broker API for trading"
+
+      # Portfolio drift
+      - alert: HighPortfolioDrift
+        expr: |
+          abs(portfolio_actual_allocation - portfolio_target_allocation) > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "High portfolio drift detected"
+          description: "Portfolio allocation for {{ $labels.symbol }} has drifted {{ $value | humanizePercentage }} from target"
+
+      # Large position concentration
+      - alert: LargePositionConcentration
+        expr: |
+          portfolio_position_percentage > 0.2
+        for: 1h
+        labels:
+          severity: warning
+          component: trading
+        annotations:
+          summary: "Large position concentration"
+          description: "Position {{ $labels.symbol }} represents {{ $value | humanizePercentage }} of portfolio (threshold: 20%)"

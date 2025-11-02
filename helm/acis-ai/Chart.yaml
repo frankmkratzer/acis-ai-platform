@@ -1,0 +1,28 @@
+apiVersion: v2
+name: acis-ai
+description: ACIS AI Platform - Autonomous Investment Management System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - ai
+  - trading
+  - investment
+  - machine-learning
+  - fintech
+
+maintainers:
+  - name: ACIS AI Platform Team
+    email: admin@acis-ai.com
+
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+
+  - name: redis
+    version: 17.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

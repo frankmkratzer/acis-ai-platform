@@ -1,0 +1,37 @@
+{{- if .Values.backend.persistence.models.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: acis-models-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.backend.name }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.backend.persistence.models.accessMode }}
+  storageClassName: {{ .Values.backend.persistence.models.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.models.size }}
+{{- end }}
+---
+{{- if .Values.backend.persistence.logs.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: acis-logs-pvc
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.backend.name }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.backend.persistence.logs.accessMode }}
+  storageClassName: {{ .Values.backend.persistence.logs.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.logs.size }}
+{{- end }}

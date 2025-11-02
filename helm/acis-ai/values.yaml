@@ -1,0 +1,266 @@
+# Default values for ACIS AI Platform
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  namespace: acis-ai
+  storageClass: standard
+
+# Backend API configuration
+backend:
+  enabled: true
+  name: acis-backend
+  replicaCount: 3
+
+  image:
+    repository: acis-ai-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+    annotations: {}
+
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  env:
+    environment: production
+    logLevel: INFO
+
+  secrets:
+    # Reference existing secret or create new one
+    existingSecret: "acis-secrets"
+
+  persistence:
+    models:
+      enabled: true
+      size: 50Gi
+      storageClass: standard
+      accessMode: ReadWriteOnce
+    logs:
+      enabled: true
+      size: 10Gi
+      storageClass: standard
+      accessMode: ReadWriteOnce
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# Frontend configuration
+frontend:
+  enabled: true
+  name: acis-frontend
+  replicaCount: 2
+
+  image:
+    repository: acis-ai-frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    annotations: {}
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+  env:
+    nodeEnv: production
+    apiUrl: "http://acis-backend:8000"
+
+# PostgreSQL configuration (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    database: acis-ai
+    username: postgres
+    existingSecret: acis-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: standard
+
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Redis configuration (using Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: false
+
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: standard
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+
+  hosts:
+    - host: api.acis-ai.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: acis-backend
+          port: 8000
+
+    - host: app.acis-ai.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: acis-frontend
+          port: 3000
+
+  tls:
+    - secretName: acis-tls
+      hosts:
+        - api.acis-ai.com
+        - app.acis-ai.com
+
+# Monitoring stack
+monitoring:
+  enabled: true
+
+  prometheus:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 9090
+
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: standard
+
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+  grafana:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 3000
+
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: standard
+
+    adminUser: admin
+    adminPassword: changeme
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  nodeExporter:
+    enabled: true
+
+  postgresExporter:
+    enabled: true
+
+# Security settings
+security:
+  podSecurityPolicy:
+    enabled: false
+
+  networkPolicy:
+    enabled: true
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: acis-ai-sa
+
+# RBAC settings
+rbac:
+  create: true
