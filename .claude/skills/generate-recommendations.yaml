@@ -1,0 +1,161 @@
+name: generate-recommendations
+description: Generate trade recommendations for a specific client account
+prompt: |
+  Generate personalized trade recommendations for a client based on their portfolio and strategy.
+
+  1. **Ask User for Client Information**
+     - Client ID or name
+     - Account type: paper_trading or live_brokerage
+     - Strategy preference: growth, value, dividend, momentum (or use client's default)
+
+  2. **Retrieve Client Profile**
+     ```sql
+     SELECT
+       c.client_id,
+       c.first_name,
+       c.last_name,
+       c.risk_tolerance,
+       c.investment_horizon,
+       cba.account_hash,
+       cba.account_type
+     FROM clients c
+     LEFT JOIN client_brokerage_accounts cba ON c.client_id = cba.client_id
+     WHERE c.client_id = {CLIENT_ID} OR LOWER(c.last_name) = LOWER('{CLIENT_NAME}');
+     ```
+
+  3. **Get Current Portfolio Holdings**
+     ```sql
+     SELECT
+       ticker,
+       quantity,
+       avg_cost,
+       current_price,
+       (current_price - avg_cost) * quantity as unrealized_pnl,
+       ((current_price - avg_cost) / avg_cost) * 100 as return_pct
+     FROM paper_positions
+     WHERE account_id = '{ACCOUNT_ID}'
+     ORDER BY quantity * current_price DESC;
+     ```
+
+  4. **Get Current Cash Balance**
+     ```sql
+     SELECT
+       cash,
+       portfolio_value,
+       (cash / portfolio_value) * 100 as cash_pct
+     FROM paper_accounts
+     WHERE account_id = '{ACCOUNT_ID}';
+     ```
+
+  5. **Run ML + RL Pipeline**
+     ```bash
+     # Generate recommendations using hybrid model
+     python portfolio/generate_client_recommendations.py \
+       --client-id {CLIENT_ID} \
+       --strategy {STRATEGY} \
+       --market-cap mid \
+       --risk-tolerance {RISK_TOLERANCE}
+     ```
+
+  6. **Retrieve Generated Recommendations**
+     ```sql
+     SELECT
+       r.ticker,
+       r.action,
+       r.quantity,
+       r.confidence,
+       r.expected_return,
+       r.reason,
+       db.close as current_price,
+       r.quantity * db.close as trade_value
+     FROM recommendations r
+     JOIN daily_bars db ON r.ticker = db.ticker AND db.date = (SELECT MAX(date) FROM daily_bars)
+     WHERE r.client_id = {CLIENT_ID}
+       AND r.generated_at > NOW() - INTERVAL '1 hour'
+     ORDER BY r.confidence DESC
+     LIMIT 20;
+     ```
+
+  7. **Calculate Portfolio Impact**
+     ```sql
+     -- Expected portfolio changes
+     WITH new_positions AS (
+       SELECT ticker, quantity FROM recommendations WHERE action = 'BUY'
+     ),
+     exits AS (
+       SELECT ticker FROM recommendations WHERE action = 'SELL'
+     )
+     SELECT
+       COUNT(DISTINCT ticker) as new_stocks,
+       SUM(quantity * current_price) as total_buy_value,
+       (SELECT COUNT(*) FROM exits) as stocks_to_sell
+     FROM new_positions
+     JOIN daily_bars db ON new_positions.ticker = db.ticker
+     WHERE db.date = (SELECT MAX(date) FROM daily_bars);
+     ```
+
+  8. **Risk Analysis**
+     ```bash
+     # Calculate portfolio risk metrics
+     python portfolio/analyze_portfolio_risk.py \
+       --client-id {CLIENT_ID} \
+       --recommendations-file /tmp/latest_recommendations.json
+     ```
+
+  9. **Generate Client-Friendly Report**
+     ```markdown
+     # Investment Recommendations for {CLIENT_NAME}
+
+     **Date**: {CURRENT_DATE}
+     **Strategy**: {STRATEGY}
+     **Portfolio Value**: ${PORTFOLIO_VALUE}
+     **Available Cash**: ${CASH} ({CASH_PCT}%)
+
+     ## Recommended Trades
+
+     ### Buy Recommendations
+     | Ticker | Quantity | Price | Total Cost | Confidence | Rationale |
+     |--------|----------|-------|------------|------------|-----------|
+     | {TICKER} | {QTY} | ${PRICE} | ${COST} | {CONF}% | {REASON} |
+
+     ### Sell Recommendations
+     | Ticker | Quantity | Current Price | P&L | Rationale |
+     |--------|----------|---------------|-----|-----------|
+     | {TICKER} | {QTY} | ${PRICE} | ${PNL} | {REASON} |
+
+     ## Portfolio Impact
+     - New positions: {NEW_COUNT}
+     - Exits: {EXIT_COUNT}
+     - Total capital deployed: ${TOTAL_BUY}
+     - Expected Sharpe ratio: {SHARPE}
+     - Portfolio turnover: {TURNOVER}%
+
+     ## Risk Metrics
+     - Expected volatility: {VOLATILITY}%
+     - Max drawdown risk: {MAX_DD}%
+     - Sector diversification: {SECTORS} sectors
+
+     ## Next Steps
+     1. Review recommendations
+     2. Approve trades via dashboard
+     3. Execute during market hours (9:30 AM - 4:00 PM ET)
+     ```
+
+  10. **Save Report**
+      ```bash
+      # Save to file and database
+      echo "{REPORT}" > reports/client_{CLIENT_ID}_recommendations_{DATE}.md
+      ```
+
+  11. **Send to Client (Optional)**
+      - Ask if user wants to email report
+      - Prepare email with PDF attachment
+      - Log communication in client_communications table
+
+  12. **Safety Checks**
+      - ✅ Client exists and active
+      - ✅ Account has sufficient cash for recommendations
+      - ✅ No duplicate pending recommendations
+      - ✅ All recommended tickers are tradeable (not delisted)
+      - ✅ Position sizes within risk limits
+      - ✅ Sector concentration limits not exceeded

@@ -1,0 +1,140 @@
+{
+  "name": "ACIS AI Platform",
+  "description": "Autonomous investment management platform combining ML (XGBoost) and RL (PPO) for quantitative trading strategies",
+  "version": "1.0.0",
+  "knowledge": [
+    {
+      "path": "claude.md",
+      "type": "overview",
+      "priority": "high"
+    },
+    {
+      "path": "ml_models/claude.md",
+      "type": "component",
+      "priority": "high"
+    },
+    {
+      "path": "rl_trading/claude.md",
+      "type": "component",
+      "priority": "high"
+    },
+    {
+      "path": "backend/claude.md",
+      "type": "component",
+      "priority": "medium"
+    },
+    {
+      "path": "frontend/claude.md",
+      "type": "component",
+      "priority": "medium"
+    },
+    {
+      "path": "database/claude.md",
+      "type": "component",
+      "priority": "high"
+    },
+    {
+      "path": "portfolio/claude.md",
+      "type": "component",
+      "priority": "high"
+    },
+    {
+      "path": "scripts/claude.md",
+      "type": "component",
+      "priority": "medium"
+    },
+    {
+      "path": ".claude/skills/README.md",
+      "type": "automation",
+      "priority": "medium"
+    },
+    {
+      "path": "README.md",
+      "type": "documentation",
+      "priority": "high"
+    }
+  ],
+  "context": {
+    "architecture": "Two-stage ML+RL pipeline with PostgreSQL database",
+    "tech_stack": {
+      "ml": "XGBoost, scikit-learn, pandas, numpy",
+      "rl": "Stable-Baselines3, PyTorch, Gymnasium",
+      "backend": "FastAPI, Python 3.11",
+      "frontend": "Next.js 14, React, TypeScript, Tailwind CSS",
+      "database": "PostgreSQL 14+",
+      "deployment": "Uvicorn, Docker (planned)"
+    },
+    "workflows": [
+      "EOD data pipeline → Feature engineering → ML training → RL training → Backtesting → Production deployment",
+      "Client onboarding → Portfolio initialization → Daily rebalancing → Trade execution → Performance reporting"
+    ],
+    "conventions": {
+      "python_style": "PEP 8, type hints, docstrings",
+      "sql_naming": "snake_case tables, lowercase columns",
+      "api_pattern": "RESTful, /api/{resource}/{action}",
+      "model_naming": "{strategy}_{marketcap} (e.g., growth_midcap)"
+    }
+  },
+  "key_files": {
+    "ml_training": [
+      "ml_models/train_xgboost.py",
+      "ml_models/feature_engineering.py"
+    ],
+    "rl_training": [
+      "rl_trading/train_hybrid_ppo.py",
+      "rl_trading/portfolio_env.py"
+    ],
+    "backtesting": [
+      "backtesting/autonomous_backtest.py"
+    ],
+    "api": [
+      "backend/api/main.py",
+      "backend/api/routes/ml_models.py",
+      "backend/api/routes/portfolio.py"
+    ],
+    "database": [
+      "database/schema.sql",
+      "database/build_clean_ml_view.sql"
+    ],
+    "automation": [
+      "scripts/auto_train_models.py",
+      "scripts/run_eod_pipeline.sh"
+    ]
+  },
+  "common_tasks": {
+    "train_ml_model": "python ml_models/train_xgboost.py --strategy growth --market-cap mid --start-date 2015-01-01 --end-date 2025-10-30",
+    "train_rl_agent": "python rl_trading/train_hybrid_ppo.py --strategy growth --market-cap mid --timesteps 100000",
+    "run_backtest": "python backtesting/autonomous_backtest.py --start-date 2015-01-01 --end-date 2025-10-30 --capital 100000",
+    "start_backend": "cd backend && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload",
+    "start_frontend": "cd frontend && npm run dev",
+    "refresh_features": "psql -U postgres -d acis-ai -c 'REFRESH MATERIALIZED VIEW CONCURRENTLY ml_training_features;'",
+    "run_eod_pipeline": "bash scripts/run_eod_pipeline.sh"
+  },
+  "important_patterns": {
+    "data_flow": "Market Data (Alpha Vantage) → daily_bars → ml_training_features (materialized view) → XGBoost predictions → RL environment → Trade signals",
+    "feature_types": "Price-based (momentum, volatility), Fundamental (ratios, growth), Technical (EMA, MACD, RSI), Sector-relative",
+    "model_stages": "Training → Validation → Backtesting → Production deployment",
+    "portfolio_rebalancing": "Check drift → Generate ML predictions → RL optimization → Execute trades → Update holdings"
+  },
+  "database_info": {
+    "connection": "postgresql://postgres:PASSWORD@localhost:5432/acis-ai",
+    "key_tables": [
+      "daily_bars (OHLCV data)",
+      "ratios (fundamental metrics)",
+      "ml_training_features (materialized view with 100+ features)",
+      "clients (user accounts)",
+      "paper_accounts (simulated trading)",
+      "paper_positions (holdings)",
+      "trade_executions (transaction history)"
+    ],
+    "important_views": [
+      "ml_training_features (main ML training data source)"
+    ]
+  },
+  "development_notes": {
+    "gpu_usage": "XGBoost and RL training support GPU acceleration with --gpu flag",
+    "data_updates": "Run EOD pipeline daily, refresh ml_training_features after updates",
+    "model_versioning": "Models saved to models/{strategy}_{marketcap}/ with metadata.json",
+    "safety": "Always backup before production deployment, use paper trading first"
+  }
+}

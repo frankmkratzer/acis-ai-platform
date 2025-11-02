@@ -1,0 +1,294 @@
+"""
+{{STRATEGY_NAME}} Strategy Training Module
+
+Strategy Focus: {{STRATEGY_DESCRIPTION}}
+Target Market Cap: {{MARKET_CAP}}
+Key Features: {{KEY_FEATURES}}
+
+Author: {{AUTHOR}}
+Created: {{DATE}}
+"""
+
+import argparse
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+from datetime import datetime
+import json
+import os
+from typing import Dict, List, Tuple
+
+# Add project root to path
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from ml_models.feature_engineering import load_ml_features
+from ml_models.model_evaluation import evaluate_model
+
+
+class {{STRATEGY_CLASS_NAME}}Strategy:
+    """
+    {{STRATEGY_NAME}} strategy implementation.
+
+    This strategy focuses on {{STRATEGY_DESCRIPTION}}.
+    """
+
+    def __init__(
+        self,
+        market_cap: str = "mid",
+        start_date: str = "2015-01-01",
+        end_date: str = None,
+        use_gpu: bool = False
+    ):
+        self.market_cap = market_cap
+        self.start_date = start_date
+        self.end_date = end_date or datetime.now().strftime("%Y-%m-%d")
+        self.use_gpu = use_gpu
+        self.model = None
+
+    def get_strategy_features(self) -> List[str]:
+        """
+        Define the most important features for this strategy.
+
+        Returns:
+            List of feature names to prioritize
+        """
+        return [
+            # TODO: Add strategy-specific features
+            "return_1d",
+            "return_5d",
+            "return_21d",
+            "volatility_21d",
+            "volume_ratio",
+            # Add more features here
+        ]
+
+    def load_data(self) -> pd.DataFrame:
+        """
+        Load and filter training data for this strategy.
+
+        Returns:
+            Filtered DataFrame ready for training
+        """
+        print(f"Loading data from {self.start_date} to {self.end_date}...")
+
+        # Load ML features
+        df = load_ml_features(
+            start_date=self.start_date,
+            end_date=self.end_date
+        )
+
+        # Filter by market cap
+        market_cap_ranges = {
+            "small": (0, 2e9),
+            "mid": (2e9, 10e9),
+            "large": (10e9, float('inf'))
+        }
+
+        if self.market_cap in market_cap_ranges:
+            min_cap, max_cap = market_cap_ranges[self.market_cap]
+            df = df[(df['market_cap'] >= min_cap) & (df['market_cap'] < max_cap)]
+
+        # TODO: Add strategy-specific filtering
+        # Example: Filter by sector, exclude certain industries, etc.
+
+        print(f"Loaded {len(df)} rows for {self.market_cap} cap stocks")
+        return df
+
+    def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Create strategy-specific features.
+
+        Args:
+            df: Input DataFrame
+
+        Returns:
+            DataFrame with additional features
+        """
+        # TODO: Add custom feature engineering
+        # Example:
+        # df['custom_momentum'] = df['return_21d'] * df['volume_ratio']
+        # df['risk_adjusted_return'] = df['return_63d'] / df['volatility_63d']
+
+        return df
+
+    def prepare_training_data(
+        self,
+        df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        """
+        Prepare features and labels for training.
+
+        Args:
+            df: Input DataFrame
+
+        Returns:
+            Tuple of (features DataFrame, labels Series)
+        """
+        # Define target (forward returns)
+        df['target'] = df.groupby('ticker')['return_1d'].shift(-21)  # 21-day forward return
+
+        # Remove rows with missing target
+        df = df.dropna(subset=['target'])
+
+        # Create binary labels (top 30% vs bottom 70%)
+        df['label'] = (df.groupby('date')['target']
+                       .transform(lambda x: (x > x.quantile(0.7)).astype(int)))
+
+        # Select features
+        feature_cols = self.get_strategy_features()
+        X = df[feature_cols]
+        y = df['label']
+
+        print(f"Training data shape: {X.shape}")
+        print(f"Positive class ratio: {y.mean():.2%}")
+
+        return X, y
+
+    def get_model_params(self) -> Dict:
+        """
+        Get XGBoost hyperparameters for this strategy.
+
+        Returns:
+            Dictionary of hyperparameters
+        """
+        params = {
+            'objective': 'binary:logistic',
+            'eval_metric': 'auc',
+            'max_depth': 6,
+            'learning_rate': 0.01,
+            'n_estimators': 500,
+            'subsample': 0.8,
+            'colsample_bytree': 0.8,
+            'min_child_weight': 3,
+            'gamma': 0.1,
+            'random_state': 42,
+        }
+
+        if self.use_gpu:
+            params['tree_method'] = 'gpu_hist'
+            params['gpu_id'] = 0
+
+        # TODO: Tune hyperparameters for your strategy
+
+        return params
+
+    def train(self) -> None:
+        """
+        Train the strategy model.
+        """
+        print(f"\n{'='*60}")
+        print(f"Training {{STRATEGY_NAME}} Strategy")
+        print(f"Market Cap: {self.market_cap}")
+        print(f"Date Range: {self.start_date} to {self.end_date}")
+        print(f"GPU: {self.use_gpu}")
+        print(f"{'='*60}\n")
+
+        # Load and prepare data
+        df = self.load_data()
+        df = self.engineer_features(df)
+        X, y = self.prepare_training_data(df)
+
+        # Train model
+        params = self.get_model_params()
+        print("\nTraining XGBoost model...")
+
+        self.model = xgb.XGBClassifier(**params)
+        self.model.fit(
+            X, y,
+            eval_set=[(X, y)],
+            verbose=50
+        )
+
+        print("\n✅ Training complete!")
+
+        # Evaluate
+        self.evaluate()
+
+        # Save
+        self.save_model()
+
+    def evaluate(self) -> Dict:
+        """
+        Evaluate model performance.
+
+        Returns:
+            Dictionary of performance metrics
+        """
+        print("\n" + "="*60)
+        print("Model Evaluation")
+        print("="*60 + "\n")
+
+        # TODO: Add evaluation logic
+        # Use evaluate_model() from model_evaluation module
+
+        metrics = {
+            'spearman_ic': 0.0,  # TODO: Calculate
+            'sharpe_ratio': 0.0,  # TODO: Calculate
+            'max_drawdown': 0.0,  # TODO: Calculate
+        }
+
+        print(f"Spearman IC: {metrics['spearman_ic']:.4f}")
+        print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+        print(f"Max Drawdown: {metrics['max_drawdown']:.2%}")
+
+        return metrics
+
+    def save_model(self) -> None:
+        """
+        Save trained model and metadata.
+        """
+        model_name = f"{{STRATEGY_NAME_LOWER}}_{self.market_cap}"
+        model_dir = f"models/{model_name}"
+        os.makedirs(model_dir, exist_ok=True)
+
+        # Save model
+        model_path = f"{model_dir}/model.json"
+        self.model.save_model(model_path)
+        print(f"\n✅ Model saved to {model_path}")
+
+        # Save metadata
+        metadata = {
+            'strategy': '{{STRATEGY_NAME}}',
+            'market_cap': self.market_cap,
+            'training_date': datetime.now().isoformat(),
+            'start_date': self.start_date,
+            'end_date': self.end_date,
+            'features': self.get_strategy_features(),
+            'hyperparameters': self.get_model_params(),
+            'performance': self.evaluate()
+        }
+
+        metadata_path = f"{model_dir}/metadata.json"
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        print(f"✅ Metadata saved to {metadata_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Train {{STRATEGY_NAME}} strategy model')
+    parser.add_argument('--market-cap', type=str, default='mid',
+                       choices=['small', 'mid', 'large'],
+                       help='Market cap segment')
+    parser.add_argument('--start-date', type=str, default='2015-01-01',
+                       help='Training start date (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=str, default=None,
+                       help='Training end date (YYYY-MM-DD)')
+    parser.add_argument('--gpu', action='store_true',
+                       help='Use GPU acceleration')
+
+    args = parser.parse_args()
+
+    # Train strategy
+    strategy = {{STRATEGY_CLASS_NAME}}Strategy(
+        market_cap=args.market_cap,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        use_gpu=args.gpu
+    )
+
+    strategy.train()
+
+
+if __name__ == '__main__':
+    main()

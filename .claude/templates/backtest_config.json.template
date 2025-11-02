@@ -1,0 +1,106 @@
+{
+  "backtest_name": "{{BACKTEST_NAME}}",
+  "description": "{{BACKTEST_DESCRIPTION}}",
+  "created_by": "{{AUTHOR}}",
+  "created_at": "{{DATE}}",
+
+  "time_period": {
+    "start_date": "2020-01-01",
+    "end_date": "2024-12-31",
+    "comment": "Date range for backtest"
+  },
+
+  "universe": {
+    "market_cap": "mid",
+    "sectors": ["Technology", "Healthcare", "Finance"],
+    "min_price": 5.0,
+    "min_volume": 100000,
+    "exclude_tickers": ["TICKER1", "TICKER2"],
+    "comment": "Define stock universe for backtesting"
+  },
+
+  "strategy": {
+    "type": "hybrid_ml_rl",
+    "ml_model": "growth_midcap",
+    "rl_model": "ppo_growth_midcap",
+    "rebalance_frequency": "monthly",
+    "comment": "Which models and strategy to use"
+  },
+
+  "portfolio": {
+    "initial_capital": 100000,
+    "max_positions": 50,
+    "min_position_size": 0.01,
+    "max_position_size": 0.05,
+    "cash_buffer": 0.02,
+    "comment": "Portfolio construction rules"
+  },
+
+  "risk_management": {
+    "max_portfolio_volatility": 0.20,
+    "max_drawdown_threshold": 0.25,
+    "stop_loss_pct": 0.15,
+    "take_profit_pct": null,
+    "max_sector_concentration": 0.30,
+    "comment": "Risk limits and controls"
+  },
+
+  "transaction_costs": {
+    "commission_per_share": 0.0,
+    "commission_min": 0.0,
+    "spread_bps": 5,
+    "market_impact_bps": 2,
+    "slippage_bps": 1,
+    "comment": "Realistic trading costs"
+  },
+
+  "ml_settings": {
+    "prediction_threshold": 0.6,
+    "top_n_stocks": 100,
+    "feature_importance_cutoff": 0.01,
+    "retrain_frequency": null,
+    "comment": "ML model specific settings"
+  },
+
+  "rl_settings": {
+    "use_rl_optimization": true,
+    "risk_aversion": 0.5,
+    "turnover_penalty": 0.1,
+    "diversification_bonus": 0.05,
+    "comment": "RL agent settings"
+  },
+
+  "execution": {
+    "execution_time": "market_close",
+    "order_type": "market",
+    "allow_fractional_shares": false,
+    "fill_probability": 0.98,
+    "comment": "How orders are executed"
+  },
+
+  "performance_metrics": {
+    "benchmark": "SPY",
+    "risk_free_rate": 0.04,
+    "calculate_rolling_metrics": true,
+    "rolling_window_days": 252,
+    "comment": "Metrics to calculate"
+  },
+
+  "output": {
+    "save_trades": true,
+    "save_daily_positions": true,
+    "save_performance_metrics": true,
+    "generate_plots": true,
+    "output_dir": "results/backtest_{{BACKTEST_NAME}}_{{DATE}}",
+    "comment": "What to save from backtest"
+  },
+
+  "advanced": {
+    "use_walk_forward": false,
+    "walk_forward_window_months": 12,
+    "walk_forward_step_months": 3,
+    "monte_carlo_runs": 0,
+    "sensitivity_analysis": false,
+    "comment": "Advanced backtesting features"
+  }
+}

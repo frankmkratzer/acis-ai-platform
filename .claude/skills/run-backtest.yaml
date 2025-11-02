@@ -1,0 +1,31 @@
+name: run-backtest
+description: Run a backtest on historical data for strategy evaluation
+prompt: |
+  Run a backtest to evaluate strategy performance. Follow these steps:
+
+  1. Ask the user for:
+     - Start date (default: 2015-01-01)
+     - End date (default: 2025-10-30)
+     - Initial capital (default: 100000)
+     - Mock mode? (true for fast test, false for full backtest)
+
+  2. Run the backtest:
+     ```bash
+     python backtesting/autonomous_backtest.py \
+       --start-date {START_DATE} \
+       --end-date {END_DATE} \
+       --capital {CAPITAL} \
+       {--mock if applicable}
+     ```
+
+  3. Monitor and report:
+     - Cumulative returns
+     - Sharpe ratio
+     - Max drawdown
+     - Win rate
+     - Number of trades
+     - Annual return
+
+  4. Compare results to S&P 500 benchmark if available
+
+  5. Suggest improvements if performance is suboptimal

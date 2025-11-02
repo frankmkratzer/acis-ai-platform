@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "postgres-acis": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:$@nJose420@localhost:5432/acis-ai"
+      ]
+    }
+  }
+}

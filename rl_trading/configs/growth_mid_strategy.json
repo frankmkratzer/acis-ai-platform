@@ -1,0 +1,47 @@
+{
+  "strategy": "growth",
+  "market_cap_segment": "mid",
+  "description": "High price appreciation potential - Mid Cap ($2B-$10B)",
+
+  "environment": {
+    "ml_top_n": 100,
+    "rl_max_positions": 50,
+    "rebalance_frequency": 20,
+    "transaction_cost": 0.0015,
+    "position_limits": [0.01, 0.10],
+    "min_ml_score": 0.012,
+    "initial_capital": 100000
+  },
+
+  "ml_filters": {
+    "min_market_cap": 2000000000,
+    "max_market_cap": 10000000000,
+    "min_price": 5.0
+  },
+
+  "ppo_hyperparams": {
+    "learning_rate": 0.0003,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gamma": 0.995,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.02,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5
+  },
+
+  "training": {
+    "total_timesteps": 1000000,
+    "eval_freq": 10000,
+    "save_freq": 50000
+  },
+
+  "portfolio_characteristics": {
+    "target_volatility": "medium-high",
+    "expected_turnover": "medium-high",
+    "focus": "capital_appreciation",
+    "rebalance_trigger": "momentum_signals"
+  }
+}

@@ -1,0 +1,301 @@
+{
+  "database": "acis-ai",
+  "description": "ACIS AI Platform - Wealth Management and Portfolio Optimization Database",
+  "tables": {
+    "clients": {
+      "description": "User accounts and client information",
+      "columns": ["client_id", "client_name", "email", "phone", "client_type", "status", "created_at", "updated_at", "is_admin", "password_hash", "is_active", "first_name", "last_name", "auto_trading_enabled", "risk_tolerance", "rebalance_frequency", "drift_threshold", "max_position_size", "allowed_strategies", "min_cash_balance", "tax_optimization_enabled", "esg_preferences", "sector_limits", "trading_mode", "date_of_birth"],
+      "primary_key": "client_id",
+      "important_notes": "Has both client_name and first_name/last_name. Use ILIKE for case-insensitive name searches."
+    },
+    "client_brokerage_accounts": {
+      "description": "Links clients to their Schwab brokerage accounts",
+      "columns": ["id", "client_id", "brokerage_id", "account_number", "account_type", "is_active", "notes", "created_at", "updated_at", "account_hash"],
+      "primary_key": "id",
+      "foreign_keys": {
+        "client_id": "clients(client_id)"
+      },
+      "important_notes": "Does NOT have client_name or first_name/last_name. MUST JOIN with clients table to get client info. account_hash is used to link to paper_positions."
+    },
+    "paper_positions": {
+      "description": "Current portfolio positions (synced from Schwab or paper trading)",
+      "columns": ["account_id", "ticker", "quantity", "avg_price", "market_value", "unrealized_pnl", "updated_at"],
+      "primary_key": ["account_id", "ticker"],
+      "foreign_keys": {
+        "account_id": "client_brokerage_accounts(account_hash)"
+      },
+      "important_notes": "account_id links to client_brokerage_accounts.account_hash (NOT id). To get client info, JOIN paper_positions -> client_brokerage_accounts -> clients."
+    },
+    "paper_accounts": {
+      "description": "Paper trading accounts for testing strategies",
+      "columns": ["account_id", "cash_balance", "buying_power", "total_value", "created_at", "updated_at"],
+      "primary_key": "account_id"
+    },
+    "portfolios": {
+      "description": "Investment portfolios (growth, dividend, value strategies)",
+      "columns": ["portfolio_id", "name", "strategy", "market_cap", "target_position_count", "rebalance_frequency", "active", "created_at", "updated_at"],
+      "primary_key": "portfolio_id",
+      "strategies": ["growth", "dividend", "value"],
+      "market_caps": ["small", "mid", "large"]
+    },
+    "portfolio_positions": {
+      "description": "Current positions with P&L tracking",
+      "columns": ["id", "account_id", "ticker", "quantity", "average_cost", "current_price", "market_value", "cost_basis", "unrealized_pnl", "unrealized_pnl_pct", "opened_date", "last_updated"],
+      "primary_key": "id"
+    },
+    "portfolio_performance": {
+      "description": "Historical portfolio performance metrics",
+      "columns": ["performance_id", "portfolio_id", "date", "snapshot_id", "total_value", "daily_return", "cumulative_return", "sharpe_ratio", "max_drawdown", "volatility", "created_at"],
+      "primary_key": "performance_id",
+      "foreign_keys": {
+        "portfolio_id": "portfolios(portfolio_id)"
+      }
+    },
+    "portfolio_value_history": {
+      "description": "Daily portfolio value snapshots",
+      "columns": ["id", "account_id", "date", "total_value", "cash_balance", "positions_value", "daily_return", "cumulative_return", "spy_return", "alpha", "created_at"],
+      "primary_key": "id"
+    },
+    "daily_bars": {
+      "description": "Daily OHLCV stock price data",
+      "columns": ["id", "ticker", "date", "open", "high", "low", "close", "volume", "vwap", "transactions", "created_at", "updated_at"],
+      "primary_key": "id",
+      "important_notes": "Use ORDER BY date DESC LIMIT 1 to get latest price for a ticker"
+    },
+    "ticker_overview": {
+      "description": "Stock ticker fundamentals and company information",
+      "columns": ["id", "ticker", "name", "market", "locale", "type", "active", "currency_name", "cik", "composite_figi", "share_class_figi", "primary_exchange", "description", "homepage_url", "phone_number", "list_date", "delisted_utc", "market_cap", "share_class_shares_outstanding", "weighted_shares_outstanding", "round_lot", "total_employees", "sic_code", "sic_description", "ticker_root", "ticker_suffix", "address_address1", "address_city", "address_postal_code", "address_state", "branding_icon_url", "branding_logo_url", "created_at", "updated_at"],
+      "primary_key": "id"
+    },
+    "ratios": {
+      "description": "Financial ratios for fundamental analysis",
+      "columns": ["ticker", "date", "cik", "price", "market_cap", "enterprise_value", "average_volume", "price_to_earnings", "price_to_book", "price_to_sales", "price_to_cash_flow", "price_to_free_cash_flow", "ev_to_sales", "ev_to_ebitda", "earnings_per_share", "return_on_assets", "return_on_equity", "dividend_yield", "current", "quick", "cash", "debt_to_equity", "free_cash_flow", "created_at", "updated_at"],
+      "primary_key": ["ticker", "date"],
+      "important_notes": "Has return_on_assets and return_on_equity (NOT roe/roa), current/quick/cash ratios (NOT current_ratio/quick_ratio)"
+    },
+    "sentiment": {
+      "description": "News sentiment analysis for stocks (does not exist in database)",
+      "columns": [],
+      "important_notes": "This table does NOT exist. Do not use it in queries."
+    },
+    "trade_executions": {
+      "description": "Executed trades and orders",
+      "columns": ["id", "rebalance_id", "account_id", "ticker", "side", "quantity", "target_price", "execution_price", "slippage", "commission", "sec_fee", "total_cost", "order_type", "brokerage_order_id", "execution_status", "submitted_at", "executed_at", "created_at"],
+      "primary_key": "id",
+      "important_notes": "Uses 'side' (not 'action') for buy/sell. Has execution_price (not price)"
+    },
+    "trade_recommendations": {
+      "description": "AI-generated trade recommendations",
+      "columns": ["id", "client_id", "account_id", "rl_portfolio_id", "rl_portfolio_name", "recommendation_type", "trades", "status", "total_trades", "total_buy_value", "total_sell_value", "expected_turnover", "notes", "created_at", "approved_at", "executed_at"],
+      "primary_key": "id",
+      "foreign_keys": {
+        "client_id": "clients(client_id)"
+      }
+    },
+    "rebalancing_events": {
+      "description": "Portfolio rebalancing history",
+      "columns": ["event_id", "portfolio_id", "rebalance_date", "prev_snapshot_id", "new_snapshot_id", "positions_added", "positions_removed", "positions_unchanged", "turnover_rate", "notes", "created_at"],
+      "primary_key": "event_id",
+      "foreign_keys": {
+        "portfolio_id": "portfolios(portfolio_id)"
+      }
+    },
+    "rebalancing_log": {
+      "description": "Detailed rebalancing logs",
+      "columns": ["id", "rebalance_date", "account_id", "strategy_selected", "meta_model_confidence", "market_regime", "pre_rebalance_value", "post_rebalance_value", "num_positions_before", "num_positions_after", "num_buys", "num_sells", "total_turnover", "total_transaction_costs", "trades", "status", "execution_time_seconds", "created_at"],
+      "primary_key": "id"
+    },
+    "backtest_results": {
+      "description": "Historical backtest performance results",
+      "columns": ["id", "rl_portfolio_id", "rl_portfolio_name", "model_path", "start_date", "end_date", "initial_capital", "final_value", "total_return", "annualized_return", "sharpe_ratio", "max_drawdown", "num_trades", "avg_turnover", "trades_file", "positions_file", "rebalance_file", "report_file", "created_at"],
+      "primary_key": "id"
+    },
+    "model_versions": {
+      "description": "ML/RL model version tracking",
+      "columns": ["id", "model_name", "version", "framework", "trained_at", "training_config", "training_duration_seconds", "training_start_date", "training_end_date", "n_training_samples", "n_features", "spearman_ic", "pearson_correlation", "train_rmse", "val_rmse", "additional_metrics", "model_path", "size_mb", "status", "is_production", "promoted_to_production_at", "description", "created_by", "notes", "tags", "created_at", "updated_at"],
+      "primary_key": "id"
+    },
+    "model_evaluation_history": {
+      "description": "Model evaluation metrics over time",
+      "columns": ["id", "model_version_id", "evaluated_at", "evaluation_period_start", "evaluation_period_end", "spearman_ic", "pearson_correlation", "rmse", "mae", "metrics", "notes", "created_at"],
+      "primary_key": "id",
+      "foreign_keys": {
+        "model_version_id": "model_versions(id)"
+      }
+    },
+    "rl_training_jobs": {
+      "description": "RL training job history and status",
+      "columns": ["id", "rl_portfolio_id", "rl_portfolio_name", "status", "timesteps", "start_date", "end_date", "progress", "current_step", "metrics", "model_path", "log_path", "error_message", "started_at", "completed_at", "created_at"],
+      "primary_key": "id"
+    },
+    "market_regime": {
+      "description": "Detected market regimes (bull, bear, sideways)",
+      "columns": ["id", "date", "vix", "realized_volatility_20d", "volatility_regime", "spy_sma_50", "spy_sma_200", "trend_regime", "advance_decline_ratio", "new_highs_lows_ratio", "sector_momentum", "treasury_10y", "treasury_2y", "yield_curve_slope", "regime_label", "regime_confidence", "created_at"],
+      "primary_key": "id"
+    },
+    "strategy_performance": {
+      "description": "Performance comparison across strategies",
+      "columns": ["id", "date", "strategy", "daily_return", "portfolio_value", "num_positions", "sharpe_ratio_30d", "max_drawdown_30d", "win_rate_30d", "volatility_30d", "beta", "outperformance_vs_spy", "created_at"],
+      "primary_key": "id"
+    },
+    "meta_strategy_selection": {
+      "description": "Adaptive strategy selection based on market conditions",
+      "columns": ["id", "date", "strategy_probabilities", "selected_strategy", "selection_confidence", "market_regime", "recent_performance", "model_version", "created_at"],
+      "primary_key": "id"
+    },
+    "risk_alerts": {
+      "description": "Risk monitoring alerts",
+      "columns": ["id", "alert_date", "account_id", "alert_type", "severity", "message", "current_drawdown", "portfolio_value", "positions_affected", "acknowledged", "resolved", "resolution_notes", "created_at"],
+      "primary_key": "id"
+    },
+    "ai_chat_history": {
+      "description": "Chatbot conversation history",
+      "columns": ["id", "user_email", "message", "response", "context", "tokens_used", "response_time_ms", "created_at"],
+      "primary_key": "id"
+    },
+    "news": {
+      "description": "Financial news articles",
+      "columns": ["article_id", "title", "author", "published_utc", "article_url", "image_url", "description", "tickers", "publisher_name", "publisher_homepage_url", "publisher_logo_url", "keywords", "sentiment", "sentiment_reasoning", "created_at", "updated_at"],
+      "primary_key": "article_id"
+    },
+    "dividends": {
+      "description": "Dividend payment history",
+      "columns": ["id", "ticker", "cash_amount", "currency", "declaration_date", "dividend_type", "ex_dividend_date", "frequency", "pay_date", "record_date", "created_at", "updated_at"],
+      "primary_key": "id"
+    },
+    "splits": {
+      "description": "Stock split history",
+      "columns": ["id", "ticker", "execution_date", "split_from", "split_to", "created_at", "updated_at"],
+      "primary_key": "id"
+    },
+    "ema": {
+      "description": "Exponential Moving Average indicators",
+      "columns": ["ticker", "date", "window_size", "series_type", "timespan", "value", "created_at", "updated_at"],
+      "primary_key": ["ticker", "date", "window_size"]
+    },
+    "sma": {
+      "description": "Simple Moving Average indicators",
+      "columns": ["ticker", "date", "window_size", "series_type", "timespan", "value", "created_at", "updated_at"],
+      "primary_key": ["ticker", "date", "window_size"]
+    },
+    "rsi": {
+      "description": "Relative Strength Index indicator",
+      "columns": ["ticker", "date", "window_size", "series_type", "timespan", "value", "created_at", "updated_at"],
+      "primary_key": ["ticker", "date", "window_size"]
+    },
+    "macd": {
+      "description": "MACD indicator",
+      "columns": ["ticker", "date", "short_window", "long_window", "signal_window", "series_type", "timespan", "macd_value", "signal_value", "histogram_value", "created_at", "updated_at"],
+      "primary_key": ["ticker", "date", "short_window", "long_window", "signal_window"]
+    },
+    "balance_sheets": {
+      "description": "Company balance sheet data",
+      "columns": ["cik", "period_end", "timeframe", "filing_date", "fiscal_quarter", "fiscal_year", "tickers", "accounts_payable", "accrued_and_other_current_liabilities", "accumulated_other_comprehensive_income", "additional_paid_in_capital", "cash_and_equivalents", "commitments_and_contingencies", "common_stock", "debt_current", "deferred_revenue_current", "goodwill", "intangible_assets_net", "inventories", "long_term_debt_and_capital_lease_obligations", "noncontrolling_interest", "other_assets", "other_current_assets", "other_equity", "other_noncurrent_liabilities", "preferred_stock", "property_plant_equipment_net", "receivables", "retained_earnings_deficit", "short_term_investments", "total_assets", "total_current_assets", "total_current_liabilities", "total_equity", "total_equity_attributable_to_parent", "total_liabilities", "total_liabilities_and_equity", "treasury_stock", "created_at", "updated_at"],
+      "primary_key": ["cik", "period_end"]
+    },
+    "income_statements": {
+      "description": "Company income statement data",
+      "columns": ["cik", "period_end", "timeframe", "filing_date", "fiscal_quarter", "fiscal_year", "tickers", "revenue", "cost_of_revenue", "gross_profit", "research_development", "selling_general_administrative", "other_operating_expenses", "total_operating_expenses", "operating_income", "interest_income", "interest_expense", "other_income_expense", "total_other_income_expense", "income_before_income_taxes", "income_taxes", "consolidated_net_income_loss", "net_income_loss_attributable_common_shareholders", "noncontrolling_interest", "discontinued_operations", "extraordinary_items", "preferred_stock_dividends_declared", "equity_in_affiliates", "basic_earnings_per_share", "basic_shares_outstanding", "diluted_earnings_per_share", "diluted_shares_outstanding", "ebitda", "depreciation_depletion_amortization", "created_at", "updated_at"],
+      "primary_key": ["cik", "period_end"]
+    },
+    "cash_flow_statements": {
+      "description": "Company cash flow data",
+      "columns": ["cik", "period_end", "timeframe", "filing_date", "fiscal_quarter", "fiscal_year", "tickers", "cash_from_operating_activities_continuing_operations", "net_cash_from_operating_activities", "net_cash_from_operating_activities_discontinued_operations", "change_in_other_operating_assets_and_liabilities_net", "other_operating_activities", "net_cash_from_investing_activities", "net_cash_from_investing_activities_continuing_operations", "net_cash_from_investing_activities_discontinued_operations", "purchase_of_property_plant_and_equipment", "sale_of_property_plant_and_equipment", "other_investing_activities", "net_cash_from_financing_activities", "net_cash_from_financing_activities_continuing_operations", "net_cash_from_financing_activities_discontinued_operations", "dividends", "long_term_debt_issuances_repayments", "short_term_debt_issuances_repayments", "other_financing_activities", "net_income", "depreciation_depletion_and_amortization", "change_in_cash_and_equivalents", "effect_of_currency_exchange_rate", "income_loss_from_discontinued_operations", "noncontrolling_interests", "other_cash_adjustments", "created_at", "updated_at"],
+      "primary_key": ["cik", "period_end"]
+    }
+  },
+  "common_join_patterns": {
+    "client_positions": {
+      "description": "Get positions for a client by name or ID",
+      "tables": ["clients", "client_brokerage_accounts", "paper_positions"],
+      "join_pattern": "paper_positions pp JOIN client_brokerage_accounts cba ON pp.account_id = cba.account_hash JOIN clients c ON cba.client_id = c.client_id",
+      "important": "paper_positions.account_id = client_brokerage_accounts.account_hash (NOT id)"
+    },
+    "stock_with_price": {
+      "description": "Get stock info with current price",
+      "tables": ["ticker_overview", "daily_bars"],
+      "join_pattern": "ticker_overview t LEFT JOIN daily_bars d ON t.ticker = d.ticker AND d.date = (SELECT MAX(date) FROM daily_bars WHERE ticker = t.ticker)"
+    },
+    "stock_with_fundamentals": {
+      "description": "Get stock with fundamentals",
+      "tables": ["ticker_overview", "ratios"],
+      "join_pattern": "ticker_overview t LEFT JOIN ratios r ON t.ticker = r.ticker AND r.date = (SELECT MAX(date) FROM ratios WHERE ticker = t.ticker)"
+    }
+  },
+  "example_queries": [
+    {
+      "question": "List Frank's holdings",
+      "sql": "SELECT c.first_name, c.last_name, pp.ticker, pp.quantity, pp.avg_price, pp.market_value, pp.unrealized_pnl FROM paper_positions pp JOIN client_brokerage_accounts cba ON pp.account_id = cba.account_hash JOIN clients c ON cba.client_id = c.client_id WHERE c.first_name ILIKE 'frank' ORDER BY pp.market_value DESC"
+    },
+    {
+      "question": "Show me holdings for client ID 1",
+      "sql": "SELECT pp.ticker, pp.quantity, pp.avg_price, pp.market_value, pp.unrealized_pnl FROM paper_positions pp JOIN client_brokerage_accounts cba ON pp.account_id = cba.account_hash WHERE cba.client_id = 1 ORDER BY pp.market_value DESC"
+    },
+    {
+      "question": "What is the total portfolio value for Frank?",
+      "sql": "SELECT c.first_name, c.last_name, SUM(pp.market_value) as total_value, SUM(pp.unrealized_pnl) as total_pnl FROM paper_positions pp JOIN client_brokerage_accounts cba ON pp.account_id = cba.account_hash JOIN clients c ON cba.client_id = c.client_id WHERE c.first_name ILIKE 'frank' GROUP BY c.first_name, c.last_name"
+    },
+    {
+      "question": "Show all active clients",
+      "sql": "SELECT client_id, first_name, last_name, email, client_type, created_at FROM clients WHERE is_active = true ORDER BY created_at DESC"
+    },
+    {
+      "question": "List all clients with their account info",
+      "sql": "SELECT c.client_id, c.first_name, c.last_name, c.email, cba.account_hash, cba.account_type, cba.is_active FROM clients c LEFT JOIN client_brokerage_accounts cba ON c.client_id = cba.client_id ORDER BY c.created_at DESC"
+    },
+    {
+      "question": "What's the current price of AAPL?",
+      "sql": "SELECT ticker, close AS current_price, volume, date FROM daily_bars WHERE ticker = 'AAPL' ORDER BY date DESC LIMIT 1"
+    },
+    {
+      "question": "Get AAPL stock info with price and fundamentals",
+      "sql": "SELECT t.ticker, t.name, d.close AS current_price, d.volume, r.price_to_earnings, r.price_to_book, r.dividend_yield, r.return_on_equity FROM ticker_overview t LEFT JOIN daily_bars d ON t.ticker = d.ticker AND d.date = (SELECT MAX(date) FROM daily_bars WHERE ticker = t.ticker) LEFT JOIN ratios r ON t.ticker = r.ticker AND r.date = (SELECT MAX(date) FROM ratios WHERE ticker = t.ticker) WHERE t.ticker = 'AAPL'"
+    },
+    {
+      "question": "Show recent trades for client 1",
+      "sql": "SELECT te.ticker, te.side, te.quantity, te.execution_price, te.total_cost, te.executed_at FROM trade_executions te WHERE te.account_id IN (SELECT account_hash FROM client_brokerage_accounts WHERE client_id = 1) ORDER BY te.executed_at DESC LIMIT 20"
+    },
+    {
+      "question": "Show top 10 holdings by value for Frank",
+      "sql": "SELECT c.first_name, c.last_name, pp.ticker, pp.quantity, pp.market_value, pp.unrealized_pnl, (pp.unrealized_pnl / (pp.avg_price * pp.quantity)) * 100 AS pnl_pct FROM paper_positions pp JOIN client_brokerage_accounts cba ON pp.account_id = cba.account_hash JOIN clients c ON cba.client_id = c.client_id WHERE c.first_name ILIKE 'frank' ORDER BY pp.market_value DESC LIMIT 10"
+    },
+    {
+      "question": "Compare portfolio performance across strategies",
+      "sql": "SELECT strategy, AVG(daily_return) AS avg_daily_return, AVG(portfolio_value) AS avg_value, AVG(sharpe_ratio_30d) AS avg_sharpe FROM strategy_performance WHERE date >= CURRENT_DATE - INTERVAL '90 days' GROUP BY strategy ORDER BY avg_sharpe DESC"
+    },
+    {
+      "question": "Show recent rebalancing events",
+      "sql": "SELECT rl.rebalance_date, rl.strategy_selected, rl.pre_rebalance_value, rl.post_rebalance_value, rl.num_buys, rl.num_sells, rl.total_turnover, rl.status FROM rebalancing_log rl ORDER BY rl.rebalance_date DESC LIMIT 20"
+    },
+    {
+      "question": "Show ML model performance",
+      "sql": "SELECT model_name, version, framework, spearman_ic, pearson_correlation, train_rmse, val_rmse, is_production, trained_at FROM model_versions WHERE status = 'completed' ORDER BY trained_at DESC LIMIT 10"
+    },
+    {
+      "question": "Get market regime for the last 30 days",
+      "sql": "SELECT date, regime_label, regime_confidence, vix, volatility_regime, trend_regime FROM market_regime WHERE date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY date DESC"
+    },
+    {
+      "question": "Show active risk alerts",
+      "sql": "SELECT alert_date, account_id, alert_type, severity, message, current_drawdown, portfolio_value FROM risk_alerts WHERE resolved = false ORDER BY alert_date DESC"
+    }
+  ],
+  "query_tips": [
+    "CRITICAL: paper_positions.account_id links to client_brokerage_accounts.account_hash (NOT id)",
+    "CRITICAL: To get client info from positions, JOIN: paper_positions -> client_brokerage_accounts -> clients",
+    "CRITICAL: Use ILIKE for case-insensitive name searches (e.g., WHERE first_name ILIKE 'frank')",
+    "CRITICAL: ratios table uses return_on_assets/return_on_equity (NOT roa/roe)",
+    "CRITICAL: ratios table uses current/quick/cash (NOT current_ratio/quick_ratio/cash_ratio)",
+    "CRITICAL: trade_executions uses 'side' column (NOT 'action') for buy/sell",
+    "CRITICAL: trade_executions uses 'execution_price' (NOT 'price')",
+    "CRITICAL: sentiment table does NOT exist in the database",
+    "Use date DESC LIMIT 1 for latest prices/ratios",
+    "Always check is_active flag for current accounts",
+    "Use INTERVAL '30 days' for date ranges",
+    "ticker_overview contains company fundamentals",
+    "daily_bars contains OHLCV price data",
+    "ratios table has pre-calculated financial ratios",
+    "Use LEFT JOIN when data might not exist (e.g., not all tickers have ratios)",
+    "portfolio_performance has pre-calculated metrics (sharpe, drawdown, etc.)"
+  ]
+}

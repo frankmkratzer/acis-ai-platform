@@ -1,0 +1,66 @@
+name: {{SKILL_NAME}}
+description: {{SKILL_DESCRIPTION}}
+prompt: |
+  {{SKILL_PROMPT}}
+
+  Follow these steps:
+
+  1. **Ask User for Input**
+     - {{INPUT_1}}
+     - {{INPUT_2}}
+     - {{INPUT_3}}
+
+  2. **Validate Prerequisites**
+     ```bash
+     # Check that required resources exist
+     {{VALIDATION_COMMAND_1}}
+     {{VALIDATION_COMMAND_2}}
+     ```
+
+  3. **Execute Main Task**
+     ```bash
+     # Run the primary operation
+     {{MAIN_COMMAND}}
+     ```
+
+  4. **Monitor Progress**
+     - {{MONITORING_STEP_1}}
+     - {{MONITORING_STEP_2}}
+     - Expected duration: {{EXPECTED_DURATION}}
+
+  5. **Verify Results**
+     ```bash
+     # Check that operation completed successfully
+     {{VERIFICATION_COMMAND_1}}
+     {{VERIFICATION_COMMAND_2}}
+     ```
+
+  6. **Report Results**
+     ```markdown
+     ✅ {{SKILL_NAME}} Complete
+
+     **Summary**:
+     - {{RESULT_1}}
+     - {{RESULT_2}}
+     - {{RESULT_3}}
+
+     **Metrics**:
+     - {{METRIC_1}}: {{VALUE_1}}
+     - {{METRIC_2}}: {{VALUE_2}}
+
+     **Next Steps**:
+     1. {{NEXT_STEP_1}}
+     2. {{NEXT_STEP_2}}
+     ```
+
+  7. **Handle Errors**
+     If errors occur:
+     - {{ERROR_HANDLING_1}}
+     - {{ERROR_HANDLING_2}}
+     - Suggest troubleshooting steps
+
+  8. **Safety Checks**
+     - ✅ {{SAFETY_CHECK_1}}
+     - ✅ {{SAFETY_CHECK_2}}
+     - ✅ {{SAFETY_CHECK_3}}
+     - ⚠️  {{WARNING_IF_APPLICABLE}}

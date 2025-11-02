@@ -1,0 +1,116 @@
+name: analyze-logs
+description: Parse and analyze platform logs for errors, warnings, and patterns
+prompt: |
+  Analyze platform logs to identify errors, warnings, and operational patterns.
+
+  1. **Ask User What to Analyze**
+     - All logs (default)
+     - Specific component: ml_training, rl_training, eod_pipeline, api, trading
+     - Time range: last hour, last day, last week (default: last day)
+     - Focus: errors only, warnings+, all levels
+
+  2. **List Available Logs**
+     ```bash
+     ls -lhtr logs/
+     ```
+
+  3. **Scan for Errors**
+     ```bash
+     # Recent errors across all logs
+     grep -i "error\|exception\|failed" logs/*.log | tail -n 50
+
+     # Count errors by type
+     grep -i "error" logs/*.log | awk -F: '{print $3}' | sort | uniq -c | sort -rn
+     ```
+
+  4. **Scan for Warnings**
+     ```bash
+     grep -i "warning\|warn" logs/*.log | tail -n 50
+     ```
+
+  5. **Check Training Logs**
+     ```bash
+     # Growth model training
+     tail -n 100 logs/growth_momentum.log
+
+     # RL training
+     tail -n 100 logs/rl_training.log
+
+     # Look for convergence issues
+     grep -i "nan\|inf\|diverged" logs/*.log
+     ```
+
+  6. **Check API Logs**
+     ```bash
+     # Recent API errors
+     grep -i "500\|400\|error" logs/api.log | tail -n 30
+
+     # Slow requests (>1s)
+     grep -i "slow\|timeout" logs/api.log
+     ```
+
+  7. **Check Trading Execution Logs**
+     ```bash
+     # Failed trades
+     grep -i "trade.*failed\|order.*rejected" logs/trading.log
+
+     # Brokerage connection issues
+     grep -i "connection\|auth.*failed" logs/trading.log
+     ```
+
+  8. **Analyze Patterns**
+     ```bash
+     # Most common error messages
+     grep -i "error" logs/*.log | sed 's/[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}//g' | sort | uniq -c | sort -rn | head -n 10
+
+     # Error frequency over time
+     grep -i "error" logs/*.log | awk '{print $1}' | sort | uniq -c
+     ```
+
+  9. **Check System Resources**
+     ```bash
+     # Disk space warnings
+     grep -i "disk\|space\|full" logs/*.log
+
+     # Memory issues
+     grep -i "memory\|oom\|killed" logs/*.log
+
+     # GPU issues
+     grep -i "cuda\|gpu\|out of memory" logs/*.log
+     ```
+
+  10. **Generate Summary Report**
+      ```
+      📊 Log Analysis Summary
+
+      Time Range: {START} to {END}
+
+      🔴 Errors: {count}
+      Top 3 Error Types:
+      1. {error_type_1}: {count_1}
+      2. {error_type_2}: {count_2}
+      3. {error_type_3}: {count_3}
+
+      ⚠️  Warnings: {count}
+
+      🔍 Patterns Detected:
+      - {pattern_1}
+      - {pattern_2}
+
+      💡 Recommendations:
+      - {recommendation_1}
+      - {recommendation_2}
+      ```
+
+  11. **Suggest Actions**
+      Based on findings:
+      - Disk space low → Clean old logs/models
+      - API errors → Check credentials/rate limits
+      - Training NaN → Review feature engineering
+      - Trade failures → Check brokerage connection
+      - Memory issues → Reduce batch size
+
+  12. **Safety Checks**
+      - ✅ Log files exist and readable
+      - ✅ Not analyzing production logs during trading hours (if live)
+      - ✅ Sanitize sensitive data (API keys, passwords) from output

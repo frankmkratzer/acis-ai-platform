@@ -1,0 +1,200 @@
+{
+  "pages": {
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/layout.css",
+      "static/chunks/app/layout.js"
+    ],
+    "/ml-models/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/ml-models/page.js"
+    ],
+    "/ml-portfolio/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/ml-portfolio/page.js"
+    ],
+    "/backtest/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/backtest/page.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/autonomous/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/autonomous/page.js"
+    ],
+    "/trading/history/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/trading/history/page.js"
+    ],
+    "/trading/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/trading/page.js"
+    ],
+    "/brokerages/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/brokerages/page.js"
+    ],
+    "/clients/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/clients/page.js"
+    ],
+    "/clients/[id]/trading/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/clients/[id]/trading/page.js"
+    ],
+    "/clients/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/clients/[id]/page.js"
+    ],
+    "/clients/[id]/portfolio-health/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/clients/[id]/portfolio-health/page.js"
+    ],
+    "/test-live-trading/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/test-live-trading/page.js"
+    ],
+    "/docs/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/page.js"
+    ],
+    "/docs/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/layout.js"
+    ],
+    "/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/page.js"
+    ],
+    "/docs/getting-started/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/getting-started/page.js"
+    ],
+    "/docs/getting-started/schwab-oauth/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/getting-started/schwab-oauth/page.js"
+    ],
+    "/docs/technical/api/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/api/page.js"
+    ],
+    "/docs/operations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/page.js"
+    ],
+    "/docs/operations/incremental-learning/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/incremental-learning/page.js"
+    ],
+    "/docs/operations/rebalancing/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/rebalancing/page.js"
+    ],
+    "/docs/getting-started/client-onboarding/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/getting-started/client-onboarding/page.js"
+    ],
+    "/docs/getting-started/first-rebalance/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/getting-started/first-rebalance/page.js"
+    ],
+    "/docs/methodology/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/methodology/page.js"
+    ],
+    "/docs/methodology/trading-strategies/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/methodology/trading-strategies/page.js"
+    ],
+    "/docs/methodology/hybrid-ml-rl/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/methodology/hybrid-ml-rl/page.js"
+    ],
+    "/docs/methodology/risk-management/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/methodology/risk-management/page.js"
+    ],
+    "/docs/methodology/market-regime/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/methodology/market-regime/page.js"
+    ],
+    "/docs/operations/daily-operations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/daily-operations/page.js"
+    ],
+    "/docs/operations/model-retraining/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/model-retraining/page.js"
+    ],
+    "/docs/operations/monitoring/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/monitoring/page.js"
+    ],
+    "/docs/operations/troubleshooting/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/operations/troubleshooting/page.js"
+    ],
+    "/docs/technical/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/page.js"
+    ],
+    "/docs/technical/database/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/database/page.js"
+    ],
+    "/docs/technical/ml-models/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/ml-models/page.js"
+    ],
+    "/docs/technical/rl-training/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/rl-training/page.js"
+    ],
+    "/docs/technical/deployment/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/docs/technical/deployment/page.js"
+    ]
+  }
+}

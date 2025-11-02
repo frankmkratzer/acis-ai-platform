@@ -1,0 +1,196 @@
+-- ============================================================================
+-- Migration: {{MIGRATION_NAME}}
+-- Description: {{MIGRATION_DESCRIPTION}}
+-- Author: {{AUTHOR}}
+-- Date: {{DATE}}
+-- ============================================================================
+
+-- This migration makes the following changes:
+-- 1. {{CHANGE_1}}
+-- 2. {{CHANGE_2}}
+-- 3. {{CHANGE_3}}
+
+BEGIN;
+
+-- ============================================================================
+-- Step 1: Create backup (optional but recommended)
+-- ============================================================================
+
+-- Backup affected tables
+CREATE TABLE IF NOT EXISTS {{TABLE_NAME}}_backup_{{DATE_TIMESTAMP}} AS
+SELECT * FROM {{TABLE_NAME}};
+
+-- ============================================================================
+-- Step 2: Add new columns
+-- ============================================================================
+
+-- Add new columns with NULL allowed initially
+ALTER TABLE {{TABLE_NAME}}
+ADD COLUMN IF NOT EXISTS {{NEW_COLUMN_1}} {{DATA_TYPE_1}} NULL,
+ADD COLUMN IF NOT EXISTS {{NEW_COLUMN_2}} {{DATA_TYPE_2}} NULL;
+
+-- Add column comments
+COMMENT ON COLUMN {{TABLE_NAME}}.{{NEW_COLUMN_1}} IS '{{COLUMN_1_DESCRIPTION}}';
+COMMENT ON COLUMN {{TABLE_NAME}}.{{NEW_COLUMN_2}} IS '{{COLUMN_2_DESCRIPTION}}';
+
+-- ============================================================================
+-- Step 3: Populate new columns with data
+-- ============================================================================
+
+-- Update new columns with values
+UPDATE {{TABLE_NAME}}
+SET
+    {{NEW_COLUMN_1}} = {{DEFAULT_VALUE_1}},
+    {{NEW_COLUMN_2}} = {{DEFAULT_VALUE_2}}
+WHERE {{CONDITION}};
+
+-- ============================================================================
+-- Step 4: Add constraints
+-- ============================================================================
+
+-- Add NOT NULL constraints after populating data
+ALTER TABLE {{TABLE_NAME}}
+ALTER COLUMN {{NEW_COLUMN_1}} SET NOT NULL,
+ALTER COLUMN {{NEW_COLUMN_2}} SET NOT NULL;
+
+-- Add check constraints
+ALTER TABLE {{TABLE_NAME}}
+ADD CONSTRAINT {{CONSTRAINT_NAME}} CHECK ({{CONSTRAINT_CONDITION}});
+
+-- Add unique constraints
+CREATE UNIQUE INDEX IF NOT EXISTS {{INDEX_NAME}}
+ON {{TABLE_NAME}} ({{COLUMN_LIST}});
+
+-- Add foreign key constraints
+ALTER TABLE {{TABLE_NAME}}
+ADD CONSTRAINT {{FK_CONSTRAINT_NAME}}
+FOREIGN KEY ({{FK_COLUMN}})
+REFERENCES {{REFERENCED_TABLE}} ({{REFERENCED_COLUMN}})
+ON DELETE CASCADE;
+
+-- ============================================================================
+-- Step 5: Create indexes for performance
+-- ============================================================================
+
+-- Create indexes on new columns
+CREATE INDEX IF NOT EXISTS idx_{{TABLE_NAME}}_{{COLUMN_NAME}}
+ON {{TABLE_NAME}} ({{COLUMN_NAME}});
+
+-- Create composite indexes
+CREATE INDEX IF NOT EXISTS idx_{{TABLE_NAME}}_{{COLUMN1}}_{{COLUMN2}}
+ON {{TABLE_NAME}} ({{COLUMN1}}, {{COLUMN2}});
+
+-- ============================================================================
+-- Step 6: Update views that depend on this table
+-- ============================================================================
+
+-- Drop and recreate materialized view
+DROP MATERIALIZED VIEW IF EXISTS {{VIEW_NAME}};
+
+CREATE MATERIALIZED VIEW {{VIEW_NAME}} AS
+SELECT
+    -- TODO: Update view definition to include new columns
+    *
+FROM {{TABLE_NAME}}
+WHERE {{CONDITION}};
+
+-- Create indexes on materialized view
+CREATE UNIQUE INDEX IF NOT EXISTS idx_{{VIEW_NAME}}_id
+ON {{VIEW_NAME}} (id);
+
+-- ============================================================================
+-- Step 7: Grant permissions
+-- ============================================================================
+
+-- Grant SELECT to read-only user
+GRANT SELECT ON {{TABLE_NAME}} TO claude_readonly;
+GRANT SELECT ON {{VIEW_NAME}} TO claude_readonly;
+
+-- ============================================================================
+-- Step 8: Verify migration
+-- ============================================================================
+
+-- Check row counts match
+DO $$
+DECLARE
+    original_count INTEGER;
+    new_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO original_count FROM {{TABLE_NAME}}_backup_{{DATE_TIMESTAMP}};
+    SELECT COUNT(*) INTO new_count FROM {{TABLE_NAME}};
+
+    IF original_count != new_count THEN
+        RAISE EXCEPTION 'Row count mismatch! Original: %, New: %', original_count, new_count;
+    END IF;
+
+    RAISE NOTICE 'Row count verified: %', new_count;
+END $$;
+
+-- Check for NULL values in new columns
+SELECT COUNT(*) as null_count
+FROM {{TABLE_NAME}}
+WHERE {{NEW_COLUMN_1}} IS NULL
+   OR {{NEW_COLUMN_2}} IS NULL;
+
+-- Verify constraints
+SELECT
+    conname as constraint_name,
+    contype as constraint_type
+FROM pg_constraint
+WHERE conrelid = '{{TABLE_NAME}}'::regclass
+  AND conname LIKE '%{{MIGRATION_NAME}}%';
+
+-- ============================================================================
+-- Commit or Rollback
+-- ============================================================================
+
+-- Review the changes above
+-- If everything looks good, commit:
+COMMIT;
+
+-- If something is wrong, rollback:
+-- ROLLBACK;
+
+-- ============================================================================
+-- Rollback Script (Save separately as rollback_{{MIGRATION_NAME}}.sql)
+-- ============================================================================
+
+/*
+BEGIN;
+
+-- Drop new constraints
+ALTER TABLE {{TABLE_NAME}} DROP CONSTRAINT IF EXISTS {{CONSTRAINT_NAME}};
+ALTER TABLE {{TABLE_NAME}} DROP CONSTRAINT IF EXISTS {{FK_CONSTRAINT_NAME}};
+
+-- Drop new indexes
+DROP INDEX IF EXISTS idx_{{TABLE_NAME}}_{{COLUMN_NAME}};
+DROP INDEX IF EXISTS idx_{{TABLE_NAME}}_{{COLUMN1}}_{{COLUMN2}};
+
+-- Drop new columns
+ALTER TABLE {{TABLE_NAME}} DROP COLUMN IF EXISTS {{NEW_COLUMN_1}};
+ALTER TABLE {{TABLE_NAME}} DROP COLUMN IF EXISTS {{NEW_COLUMN_2}};
+
+-- Restore from backup if needed
+-- TRUNCATE {{TABLE_NAME}};
+-- INSERT INTO {{TABLE_NAME}} SELECT * FROM {{TABLE_NAME}}_backup_{{DATE_TIMESTAMP}};
+
+-- Recreate original view
+DROP MATERIALIZED VIEW IF EXISTS {{VIEW_NAME}};
+CREATE MATERIALIZED VIEW {{VIEW_NAME}} AS
+SELECT * FROM {{TABLE_NAME}};
+
+COMMIT;
+*/
+
+-- ============================================================================
+-- Post-Migration Tasks
+-- ============================================================================
+
+-- TODO: Update application code to use new columns
+-- TODO: Update documentation
+-- TODO: Notify team of schema changes
+-- TODO: Monitor performance after migration
+-- TODO: Drop backup table after verification period (e.g., 7 days)
+
+-- Clean up backup (run manually after verification):
+-- DROP TABLE IF EXISTS {{TABLE_NAME}}_backup_{{DATE_TIMESTAMP}};

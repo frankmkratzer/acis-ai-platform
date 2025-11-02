@@ -1,0 +1,45 @@
+name: deploy-model
+description: Promote a trained model to production status
+prompt: |
+  Promote a model to production. This skill handles safe model deployment.
+
+  1. **List Available Models**
+     ```bash
+     ls -lhR models/
+     ```
+
+  2. **Ask User for Model Name**
+     - Example: "growth_midcap", "value_largecap", "ppo_growth_mid"
+
+  3. **Check Current Production Model**
+     ```bash
+     curl -s http://localhost:8000/api/ml-models/production | jq
+     ```
+
+  4. **Validate Model Performance**
+     - Check Spearman IC or Sharpe ratio
+     - Ensure model has metadata.json
+     - Warn if performance is below threshold
+
+  5. **Confirm Deployment**
+     - Show current vs new model comparison
+     - Ask for confirmation
+     - Request deployment reason (optional)
+
+  6. **Promote Model**
+     ```bash
+     curl -X POST "http://localhost:8000/api/ml-models/{MODEL_NAME}/set-production" \
+       -H "Content-Type: application/json" \
+       -d '{"reason": "Better IC / Sharpe ratio"}'
+     ```
+
+  7. **Verify Deployment**
+     - Check production status updated
+     - Log deployment to model_deployment_log table
+     - Recommend monitoring for 24-48 hours
+
+  8. **Safety Checks**
+     - ✅ Model file exists
+     - ✅ Metadata valid
+     - ✅ Performance acceptable
+     - ✅ User confirmed

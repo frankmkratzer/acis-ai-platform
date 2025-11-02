@@ -1,0 +1,244 @@
+name: compare-models
+description: Compare performance metrics of two or more models side-by-side
+prompt: |
+  Compare performance metrics and characteristics of multiple models to help select the best performer.
+
+  1. **Ask User What to Compare**
+     - Model type: XGBoost or RL (PPO)
+     - Specific models to compare (e.g., growth_mid vs value_mid)
+     - OR: Compare all models within same strategy
+     - OR: Compare current vs production
+
+  2. **List Available Models**
+     ```bash
+     # XGBoost models
+     echo "📊 XGBoost Models:"
+     for dir in models/*/; do
+       if [ -f "$dir/metadata.json" ]; then
+         echo "  - $(basename $dir)"
+       fi
+     done
+
+     # RL models
+     echo "🤖 RL Models:"
+     for dir in rl_models/*/; do
+       if [ -f "$dir/training_metrics.json" ]; then
+         echo "  - $(basename $dir)"
+       fi
+     done
+     ```
+
+  3. **Extract Model Metadata**
+     ```bash
+     # Function to extract metrics
+     extract_metrics() {
+       model_path=$1
+       echo "=== $(basename $model_path) ==="
+
+       if [ -f "$model_path/metadata.json" ]; then
+         jq '{
+           trained_date: .training_date,
+           spearman_ic: .performance.spearman_ic,
+           sharpe_ratio: .performance.sharpe_ratio,
+           max_drawdown: .performance.max_drawdown,
+           win_rate: .performance.win_rate,
+           total_samples: .training_info.total_samples,
+           features_used: .training_info.num_features
+         }' "$model_path/metadata.json"
+       fi
+       echo ""
+     }
+
+     # Compare specified models
+     for model in {MODEL_1} {MODEL_2} {MODEL_3}; do
+       extract_metrics "models/$model"
+     done
+     ```
+
+  4. **Query Database for Historical Performance**
+     ```sql
+     SELECT
+       model_name,
+       version,
+       deployed_at,
+       spearman_ic,
+       sharpe_ratio,
+       max_drawdown,
+       win_rate,
+       is_production
+     FROM model_deployment_log
+     WHERE model_name IN ({MODEL_LIST})
+     ORDER BY deployed_at DESC;
+     ```
+
+  5. **Compare Feature Importance** (XGBoost only)
+     ```bash
+     # Extract top 10 features for each model
+     for model in {MODEL_1} {MODEL_2}; do
+       echo "=== $model Top Features ==="
+       cat "models/$model/feature_importance.csv" | head -n 11
+       echo ""
+     done
+     ```
+
+  6. **Backtest Comparison** (if backtest results exist)
+     ```bash
+     # Compare backtest results
+     for model in {MODEL_1} {MODEL_2}; do
+       echo "=== $model Backtest Results ==="
+       if [ -f "results/backtest_${model}.json" ]; then
+         jq '{
+           cumulative_return: .cumulative_return,
+           sharpe_ratio: .sharpe_ratio,
+           max_drawdown: .max_drawdown,
+           total_trades: .total_trades,
+           win_rate: .win_rate
+         }' "results/backtest_${model}.json"
+       fi
+       echo ""
+     done
+     ```
+
+  7. **RL Model Comparison** (if comparing RL agents)
+     ```bash
+     # Compare PPO training metrics
+     for model in {RL_MODEL_1} {RL_MODEL_2}; do
+       echo "=== $model RL Metrics ==="
+       cat "rl_models/$model/training_metrics.json" | jq '{
+         final_sharpe: .final_sharpe_ratio,
+         avg_episode_reward: .avg_episode_reward,
+         convergence_episode: .convergence_episode,
+         policy_loss: .final_policy_loss,
+         value_loss: .final_value_loss
+       }'
+       echo ""
+     done
+     ```
+
+  8. **Statistical Comparison**
+     ```python
+     # Run statistical significance test
+     python -c "
+     import json
+     import numpy as np
+     from scipy import stats
+
+     # Load backtest returns for both models
+     with open('results/backtest_{MODEL_1}.json') as f:
+         returns_1 = np.array(json.load(f)['daily_returns'])
+
+     with open('results/backtest_{MODEL_2}.json') as f:
+         returns_2 = np.array(json.load(f)['daily_returns'])
+
+     # T-test for mean returns
+     t_stat, p_value = stats.ttest_ind(returns_1, returns_2)
+
+     print(f'T-statistic: {t_stat:.4f}')
+     print(f'P-value: {p_value:.4f}')
+     print(f'Significantly different: {\"Yes\" if p_value < 0.05 else \"No\"}')
+     "
+     ```
+
+  9. **Generate Comparison Report**
+     ```markdown
+     # Model Comparison Report
+
+     **Date**: {CURRENT_DATE}
+     **Models Compared**: {MODEL_1} vs {MODEL_2} vs {MODEL_3}
+
+     ## Performance Metrics
+
+     | Metric | {MODEL_1} | {MODEL_2} | {MODEL_3} | Winner |
+     |--------|-----------|-----------|-----------|--------|
+     | Spearman IC | {IC_1} | {IC_2} | {IC_3} | 🏆 {BEST_IC} |
+     | Sharpe Ratio | {SHARPE_1} | {SHARPE_2} | {SHARPE_3} | 🏆 {BEST_SHARPE} |
+     | Max Drawdown | {DD_1} | {DD_2} | {DD_3} | 🏆 {BEST_DD} |
+     | Win Rate | {WR_1}% | {WR_2}% | {WR_3}% | 🏆 {BEST_WR} |
+     | Cumulative Return | {RET_1}% | {RET_2}% | {RET_3}% | 🏆 {BEST_RET} |
+
+     ## Training Details
+
+     | Detail | {MODEL_1} | {MODEL_2} | {MODEL_3} |
+     |--------|-----------|-----------|-----------|
+     | Training Date | {DATE_1} | {DATE_2} | {DATE_3} |
+     | Samples | {SAMPLES_1} | {SAMPLES_2} | {SAMPLES_3} |
+     | Features | {FEATURES_1} | {FEATURES_2} | {FEATURES_3} |
+     | Training Time | {TIME_1} | {TIME_2} | {TIME_3} |
+
+     ## Feature Importance Overlap
+
+     Top 5 features common to all models:
+     1. {COMMON_FEATURE_1}
+     2. {COMMON_FEATURE_2}
+     3. {COMMON_FEATURE_3}
+     4. {COMMON_FEATURE_4}
+     5. {COMMON_FEATURE_5}
+
+     Unique to {MODEL_1}: {UNIQUE_FEATURES_1}
+     Unique to {MODEL_2}: {UNIQUE_FEATURES_2}
+
+     ## Statistical Analysis
+
+     **{MODEL_1} vs {MODEL_2}**:
+     - T-statistic: {T_STAT}
+     - P-value: {P_VALUE}
+     - Significantly different: {YES/NO}
+
+     ## Recommendation
+
+     🏆 **Best Overall Model**: {BEST_MODEL}
+
+     **Rationale**: {EXPLANATION}
+
+     **Suggested Action**:
+     - [ ] Deploy {BEST_MODEL} to production
+     - [ ] Run live paper trading for validation
+     - [ ] Archive underperforming models
+
+     ## Trade-offs
+
+     - {MODEL_1}: {PROS_AND_CONS}
+     - {MODEL_2}: {PROS_AND_CONS}
+     - {MODEL_3}: {PROS_AND_CONS}
+     ```
+
+  10. **Visualize Comparison** (optional)
+      ```bash
+      # Generate comparison charts
+      python scripts/visualize_model_comparison.py \
+        --models {MODEL_1} {MODEL_2} {MODEL_3} \
+        --output reports/model_comparison_{DATE}.png
+      ```
+
+  11. **Save Comparison Report**
+      ```bash
+      # Save report to file
+      echo "{REPORT}" > reports/model_comparison_{DATE}.md
+
+      # Log comparison to database
+      INSERT INTO model_comparisons (
+        comparison_date,
+        models_compared,
+        winner,
+        rationale
+      ) VALUES (
+        NOW(),
+        ARRAY['{MODEL_1}', '{MODEL_2}', '{MODEL_3}'],
+        '{BEST_MODEL}',
+        '{RATIONALE}'
+      );
+      ```
+
+  12. **Recommendation Summary**
+      Based on comparison results:
+      - ✅ Recommend deployment if new model beats production by >10% Sharpe
+      - ⚠️  Suggest more testing if difference is <5%
+      - 🔄 Recommend ensemble approach if models excel in different areas
+      - 📊 Suggest A/B testing if statistical significance is unclear
+
+  13. **Safety Checks**
+      - ✅ All model files exist and readable
+      - ✅ Metadata files are valid JSON
+      - ✅ Backtest results available for fair comparison
+      - ✅ Models trained on similar time periods (warn if >6 months apart)
+      - ✅ Feature sets are comparable (warn if >30% difference)

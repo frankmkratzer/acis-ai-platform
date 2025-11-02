@@ -1,0 +1,81 @@
+name: sync-market-data
+description: Run the end-of-day market data pipeline to update database
+prompt: |
+  Execute the EOD (end-of-day) market data pipeline to fetch and process the latest market data.
+
+  1. **Check Current Data Status**
+     ```sql
+     SELECT MAX(date) as latest_date FROM daily_bars;
+     SELECT MAX(date) as latest_fundamentals FROM ratios;
+     SELECT COUNT(DISTINCT ticker) as ticker_count FROM daily_bars WHERE date = (SELECT MAX(date) FROM daily_bars);
+     ```
+
+  2. **Verify API Credentials**
+     ```bash
+     # Check if Alpha Vantage API key is set
+     grep -q "ALPHA_VANTAGE_API_KEY" .env && echo "✅ API key found" || echo "❌ API key missing"
+
+     # Check rate limits (5 calls/min for free tier)
+     echo "Note: Free tier = 5 calls/min, 500 calls/day"
+     ```
+
+  3. **Ask User for Confirmation**
+     - Show current latest date
+     - Confirm they want to run full EOD pipeline
+     - Warn: May take 30-60 minutes for full universe (2000+ tickers)
+     - Option: Quick mode (top 500 tickers only)
+
+  4. **Run EOD Pipeline**
+     ```bash
+     # Full pipeline
+     bash scripts/run_eod_pipeline.sh
+
+     # OR Quick mode (if user selected)
+     bash scripts/run_eod_pipeline.sh --quick
+     ```
+
+  5. **Monitor Progress**
+     ```bash
+     # Watch log file
+     tail -f logs/eod_pipeline.log
+     ```
+
+  6. **Verify Data Quality**
+     ```sql
+     -- Check new data inserted
+     SELECT date, COUNT(DISTINCT ticker) as tickers, COUNT(*) as bars
+     FROM daily_bars
+     WHERE date > CURRENT_DATE - INTERVAL '7 days'
+     GROUP BY date
+     ORDER BY date DESC;
+
+     -- Check for missing data
+     SELECT ticker, MAX(date) as last_update
+     FROM daily_bars
+     GROUP BY ticker
+     HAVING MAX(date) < CURRENT_DATE - INTERVAL '3 days'
+     LIMIT 20;
+     ```
+
+  7. **Refresh Dependent Views**
+     ```sql
+     REFRESH MATERIALIZED VIEW CONCURRENTLY ml_training_features;
+     ```
+
+  8. **Report Results**
+     - Total tickers updated
+     - Date range of new data
+     - Any failed tickers
+     - Data quality issues (gaps, anomalies)
+     - Recommend: "Retrain models if >1 week of new data added"
+
+  9. **Error Handling**
+     - If API rate limit hit: Show wait time and resume command
+     - If tickers fail: Log to failed_tickers.txt for retry
+     - If database errors: Check connection and disk space
+
+  10. **Safety Checks**
+      - ✅ Database connection available
+      - ✅ API credentials valid
+      - ✅ Sufficient disk space (>5GB recommended)
+      - ✅ No concurrent pipeline already running

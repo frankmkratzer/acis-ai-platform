@@ -1,0 +1,33 @@
+{
+  "period": {
+    "start_date": "2015-01-01",
+    "end_date": "2025-10-27",
+    "total_days": 2722,
+    "years": 10.801587301587302
+  },
+  "returns": {
+    "total_return": 19.580910103528925,
+    "cagr": 0.3231199525492148,
+    "best_day": 0.08215298071074906,
+    "worst_day": -0.09742817909586077
+  },
+  "risk": {
+    "max_drawdown": -0.35747634434555325,
+    "annual_volatility": 0.26321099073604776,
+    "sharpe_ratio": 1.1965498386665698,
+    "sortino_ratio": 1.6114869282815323
+  },
+  "trading": {
+    "num_rebalances": 130,
+    "num_trades": 1205,
+    "win_rate": 0.5608232267548695,
+    "avg_positions": 7.3538461538461535
+  },
+  "final_state": {
+    "initial_capital": 100000.0,
+    "final_value": 2058091.0103528926,
+    "cash": 5.820766091346741e-11,
+    "positions_value": 2058091.0103528926,
+    "num_positions": 10
+  }
+}

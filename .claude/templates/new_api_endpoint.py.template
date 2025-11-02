@@ -1,0 +1,382 @@
+"""
+{{ENDPOINT_NAME}} API Endpoint
+
+Description: {{ENDPOINT_DESCRIPTION}}
+
+Author: {{AUTHOR}}
+Created: {{DATE}}
+"""
+
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from datetime import datetime
+import logging
+
+# Database imports
+from ..database import get_db_connection
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/{{ROUTE_PREFIX}}", tags=["{{TAG_NAME}}"])
+
+
+# ============================================================================
+# Request/Response Models
+# ============================================================================
+
+class {{REQUEST_MODEL_NAME}}Request(BaseModel):
+    """Request model for {{ENDPOINT_NAME}}."""
+
+    # TODO: Add request fields
+    param1: str = Field(..., description="Description of param1")
+    param2: Optional[int] = Field(None, description="Description of param2")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "param1": "example_value",
+                "param2": 123
+            }
+        }
+
+
+class {{RESPONSE_MODEL_NAME}}Response(BaseModel):
+    """Response model for {{ENDPOINT_NAME}}."""
+
+    # TODO: Add response fields
+    id: int
+    name: str
+    created_at: datetime
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Example Name",
+                "created_at": "2025-01-01T00:00:00"
+            }
+        }
+
+
+class ErrorResponse(BaseModel):
+    """Error response model."""
+    error: str
+    detail: Optional[str] = None
+
+
+# ============================================================================
+# Endpoint Implementations
+# ============================================================================
+
+@router.get(
+    "/{{ENDPOINT_PATH}}",
+    response_model=List[{{RESPONSE_MODEL_NAME}}Response],
+    summary="{{ENDPOINT_SUMMARY}}",
+    description="{{ENDPOINT_DESCRIPTION}}",
+    responses={
+        200: {"description": "Successful response"},
+        404: {"description": "Resource not found", "model": ErrorResponse},
+        500: {"description": "Internal server error", "model": ErrorResponse}
+    }
+)
+async def get_{{ENDPOINT_FUNCTION_NAME}}(
+    # Query parameters
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    # TODO: Add more query parameters
+) -> List[{{RESPONSE_MODEL_NAME}}Response]:
+    """
+    Get {{ENDPOINT_NAME}}.
+
+    Args:
+        limit: Maximum number of results to return
+        offset: Number of results to skip for pagination
+
+    Returns:
+        List of {{RESPONSE_MODEL_NAME}} objects
+
+    Raises:
+        HTTPException: If database error or resource not found
+    """
+    try:
+        logger.info(f"Fetching {{ENDPOINT_NAME}} (limit={limit}, offset={offset})")
+
+        # Get database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # TODO: Implement your query
+        query = """
+            SELECT
+                id,
+                name,
+                created_at
+            FROM {{TABLE_NAME}}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """
+
+        cursor.execute(query, (limit, offset))
+        results = cursor.fetchall()
+
+        # Format response
+        response = [
+            {{RESPONSE_MODEL_NAME}}Response(
+                id=row[0],
+                name=row[1],
+                created_at=row[2]
+            )
+            for row in results
+        ]
+
+        cursor.close()
+        conn.close()
+
+        logger.info(f"Successfully fetched {len(response)} {{ENDPOINT_NAME}}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error fetching {{ENDPOINT_NAME}}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/{{ENDPOINT_PATH}}/{id}",
+    response_model={{RESPONSE_MODEL_NAME}}Response,
+    summary="Get single {{ENDPOINT_NAME}} by ID",
+    responses={
+        200: {"description": "Successful response"},
+        404: {"description": "Resource not found", "model": ErrorResponse},
+        500: {"description": "Internal server error", "model": ErrorResponse}
+    }
+)
+async def get_{{ENDPOINT_FUNCTION_NAME}}_by_id(
+    id: int
+) -> {{RESPONSE_MODEL_NAME}}Response:
+    """
+    Get a single {{ENDPOINT_NAME}} by ID.
+
+    Args:
+        id: The ID of the resource
+
+    Returns:
+        {{RESPONSE_MODEL_NAME}} object
+
+    Raises:
+        HTTPException: If resource not found or database error
+    """
+    try:
+        logger.info(f"Fetching {{ENDPOINT_NAME}} with ID {id}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        query = """
+            SELECT
+                id,
+                name,
+                created_at
+            FROM {{TABLE_NAME}}
+            WHERE id = %s
+        """
+
+        cursor.execute(query, (id,))
+        result = cursor.fetchone()
+
+        if not result:
+            raise HTTPException(status_code=404, detail=f"{{ENDPOINT_NAME}} with ID {id} not found")
+
+        response = {{RESPONSE_MODEL_NAME}}Response(
+            id=result[0],
+            name=result[1],
+            created_at=result[2]
+        )
+
+        cursor.close()
+        conn.close()
+
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching {{ENDPOINT_NAME}} {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/{{ENDPOINT_PATH}}",
+    response_model={{RESPONSE_MODEL_NAME}}Response,
+    status_code=201,
+    summary="Create new {{ENDPOINT_NAME}}",
+    responses={
+        201: {"description": "Resource created successfully"},
+        400: {"description": "Invalid request", "model": ErrorResponse},
+        500: {"description": "Internal server error", "model": ErrorResponse}
+    }
+)
+async def create_{{ENDPOINT_FUNCTION_NAME}}(
+    request: {{REQUEST_MODEL_NAME}}Request
+) -> {{RESPONSE_MODEL_NAME}}Response:
+    """
+    Create a new {{ENDPOINT_NAME}}.
+
+    Args:
+        request: Request body with {{ENDPOINT_NAME}} data
+
+    Returns:
+        Created {{RESPONSE_MODEL_NAME}} object
+
+    Raises:
+        HTTPException: If validation fails or database error
+    """
+    try:
+        logger.info(f"Creating new {{ENDPOINT_NAME}}: {request}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # TODO: Implement insert logic
+        query = """
+            INSERT INTO {{TABLE_NAME}} (name, created_at)
+            VALUES (%s, NOW())
+            RETURNING id, name, created_at
+        """
+
+        cursor.execute(query, (request.param1,))
+        result = cursor.fetchone()
+        conn.commit()
+
+        response = {{RESPONSE_MODEL_NAME}}Response(
+            id=result[0],
+            name=result[1],
+            created_at=result[2]
+        )
+
+        cursor.close()
+        conn.close()
+
+        logger.info(f"Successfully created {{ENDPOINT_NAME}} with ID {response.id}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error creating {{ENDPOINT_NAME}}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/{{ENDPOINT_PATH}}/{id}",
+    response_model={{RESPONSE_MODEL_NAME}}Response,
+    summary="Update {{ENDPOINT_NAME}}",
+    responses={
+        200: {"description": "Resource updated successfully"},
+        404: {"description": "Resource not found", "model": ErrorResponse},
+        500: {"description": "Internal server error", "model": ErrorResponse}
+    }
+)
+async def update_{{ENDPOINT_FUNCTION_NAME}}(
+    id: int,
+    request: {{REQUEST_MODEL_NAME}}Request
+) -> {{RESPONSE_MODEL_NAME}}Response:
+    """
+    Update an existing {{ENDPOINT_NAME}}.
+
+    Args:
+        id: The ID of the resource to update
+        request: Request body with updated data
+
+    Returns:
+        Updated {{RESPONSE_MODEL_NAME}} object
+
+    Raises:
+        HTTPException: If resource not found or database error
+    """
+    try:
+        logger.info(f"Updating {{ENDPOINT_NAME}} {id}: {request}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if exists
+        cursor.execute("SELECT id FROM {{TABLE_NAME}} WHERE id = %s", (id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"{{ENDPOINT_NAME}} with ID {id} not found")
+
+        # Update
+        query = """
+            UPDATE {{TABLE_NAME}}
+            SET name = %s
+            WHERE id = %s
+            RETURNING id, name, created_at
+        """
+
+        cursor.execute(query, (request.param1, id))
+        result = cursor.fetchone()
+        conn.commit()
+
+        response = {{RESPONSE_MODEL_NAME}}Response(
+            id=result[0],
+            name=result[1],
+            created_at=result[2]
+        )
+
+        cursor.close()
+        conn.close()
+
+        logger.info(f"Successfully updated {{ENDPOINT_NAME}} {id}")
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating {{ENDPOINT_NAME}} {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete(
+    "/{{ENDPOINT_PATH}}/{id}",
+    status_code=204,
+    summary="Delete {{ENDPOINT_NAME}}",
+    responses={
+        204: {"description": "Resource deleted successfully"},
+        404: {"description": "Resource not found", "model": ErrorResponse},
+        500: {"description": "Internal server error", "model": ErrorResponse}
+    }
+)
+async def delete_{{ENDPOINT_FUNCTION_NAME}}(
+    id: int
+):
+    """
+    Delete a {{ENDPOINT_NAME}}.
+
+    Args:
+        id: The ID of the resource to delete
+
+    Raises:
+        HTTPException: If resource not found or database error
+    """
+    try:
+        logger.info(f"Deleting {{ENDPOINT_NAME}} {id}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if exists
+        cursor.execute("SELECT id FROM {{TABLE_NAME}} WHERE id = %s", (id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"{{ENDPOINT_NAME}} with ID {id} not found")
+
+        # Delete
+        cursor.execute("DELETE FROM {{TABLE_NAME}} WHERE id = %s", (id,))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        logger.info(f"Successfully deleted {{ENDPOINT_NAME}} {id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting {{ENDPOINT_NAME}} {id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

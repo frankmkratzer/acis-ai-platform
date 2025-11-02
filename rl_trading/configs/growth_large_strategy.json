@@ -1,0 +1,46 @@
+{
+  "strategy": "growth",
+  "market_cap_segment": "large",
+  "description": "High price appreciation potential - Large Cap (>$10B)",
+
+  "environment": {
+    "ml_top_n": 80,
+    "rl_max_positions": 40,
+    "rebalance_frequency": 20,
+    "transaction_cost": 0.001,
+    "position_limits": [0.015, 0.12],
+    "min_ml_score": 0.010,
+    "initial_capital": 100000
+  },
+
+  "ml_filters": {
+    "min_market_cap": 10000000000,
+    "min_price": 5.0
+  },
+
+  "ppo_hyperparams": {
+    "learning_rate": 0.0003,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gamma": 0.995,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.015,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5
+  },
+
+  "training": {
+    "total_timesteps": 1000000,
+    "eval_freq": 10000,
+    "save_freq": 50000
+  },
+
+  "portfolio_characteristics": {
+    "target_volatility": "medium",
+    "expected_turnover": "medium",
+    "focus": "capital_appreciation",
+    "rebalance_trigger": "momentum_signals"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "strategy": "dividend",
+  "market_cap_segment": "mid",
+  "description": "High dividend yield + sustainable fundamentals (Mid/Large cap only)",
+
+  "environment": {
+    "ml_top_n": 100,
+    "rl_max_positions": 40,
+    "rebalance_frequency": 20,
+    "transaction_cost": 0.001,
+    "position_limits": [0.015, 0.08],
+    "min_ml_score": 0.01,
+    "initial_capital": 100000
+  },
+
+  "ml_filters": {
+    "min_market_cap": 2000000000,
+    "min_price": 5.0,
+    "min_dividend_yield": 0.01
+  },
+
+  "ppo_hyperparams": {
+    "learning_rate": 0.0003,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gamma": 0.98,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.005,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.5
+  },
+
+  "training": {
+    "total_timesteps": 1000000,
+    "eval_freq": 10000,
+    "save_freq": 50000
+  },
+
+  "portfolio_characteristics": {
+    "target_volatility": "low",
+    "expected_turnover": "low",
+    "focus": "income_generation",
+    "rebalance_trigger": "quarterly_or_threshold"
+  }
+}

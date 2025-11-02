@@ -1,0 +1,64 @@
+name: train-rl-agent
+description: Train the PPO reinforcement learning agent for portfolio optimization
+prompt: |
+  Train the PPO (Proximal Policy Optimization) agent for portfolio optimization. This agent refines ML model outputs (100 stocks → 50 optimal positions).
+
+  1. **Ask User for Configuration**
+     - Strategy type: growth, value, dividend, momentum (default: growth)
+     - Market cap: small, mid, large (default: mid)
+     - Training episodes (default: 500)
+     - Use GPU? (default: yes if available)
+
+  2. **Verify Prerequisites**
+     ```bash
+     # Check if XGBoost model exists for this strategy
+     ls -lh models/{strategy}_{marketcap}/model.json
+
+     # Check GPU availability
+     nvidia-smi
+     ```
+
+  3. **Check ML Feature Data**
+     ```sql
+     SELECT COUNT(*) as total_rows,
+            MIN(date) as start_date,
+            MAX(date) as end_date
+     FROM ml_training_features;
+     ```
+
+  4. **Run PPO Training**
+     ```bash
+     python rl_trading/train_hybrid_ppo.py \
+       --strategy {strategy} \
+       --market-cap {marketcap} \
+       --episodes {episodes} \
+       --gpu {0 if GPU else omit flag}
+     ```
+
+  5. **Monitor Training Progress**
+     - Watch episode rewards
+     - Track Sharpe ratio improvements
+     - Monitor convergence (policy loss, value loss)
+     - Expected duration: 2-4 hours for 500 episodes
+
+  6. **Evaluate Results**
+     ```bash
+     # Check trained model
+     ls -lh rl_models/ppo_{strategy}_{marketcap}/
+
+     # Review training metrics
+     cat rl_models/ppo_{strategy}_{marketcap}/training_metrics.json
+     ```
+
+  7. **Report Performance**
+     - Final Sharpe ratio
+     - Average episode reward
+     - Convergence status
+     - Model save location
+     - Recommend next steps (backtesting, comparison)
+
+  8. **Safety Checks**
+     - ✅ XGBoost model exists (PPO needs ML predictions)
+     - ✅ Sufficient training data (>2 years recommended)
+     - ✅ GPU available or user confirmed CPU training
+     - ✅ Disk space for checkpoints (check ~500MB free)

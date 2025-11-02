@@ -1,0 +1,6 @@
+'use client'
+import Link from 'next/link'
+import { TrendingUp, Cloud, Activity } from 'lucide-react'
+export default function MarketRegime() {
+  return (<div className="prose prose-blue max-w-none"><h1 className="text-4xl font-bold mb-4">Market Regime Detection</h1><p className="text-xl text-gray-600 mb-8">How ACIS AI automatically detects and adapts to market conditions.</p><section className="mb-8"><h2 className="text-2xl font-bold mb-4">Detected Regimes</h2><div className="grid grid-cols-3 gap-3 not-prose text-xs"><div className="bg-green-50 border p-3 rounded"><p className="font-bold">Bull Market</p><p className="text-gray-600 mt-1">Growth & Momentum favored</p></div><div className="bg-yellow-50 border p-3 rounded"><p className="font-bold">Correction</p><p className="text-gray-600 mt-1">Value & Dividend favored</p></div><div className="bg-blue-50 border p-3 rounded"><p className="font-bold">Consolidation</p><p className="text-gray-600 mt-1">Balanced approach</p></div></div></section><section className="mb-8"><h2 className="text-2xl font-bold mb-4">Meta-Model</h2><p className="text-sm">The meta-model automatically selects the best strategy based on:</p><ul className="text-sm mt-2"><li>VIX levels (volatility index)</li><li>Market breadth indicators</li><li>Sector rotation patterns</li><li>Recent strategy performance</li></ul></section></div>)
+}

@@ -1,0 +1,40 @@
+name: health-check
+description: Perform comprehensive system health check
+prompt: |
+  Run a comprehensive health check of the ACIS AI platform. Check:
+
+  1. **Database Connectivity**
+     ```bash
+     PGPASSWORD='$@nJose420' psql -U postgres -d acis-ai -c "SELECT NOW();"
+     ```
+
+  2. **Backend API Status**
+     ```bash
+     curl -s http://localhost:8000/docs | head -n 5
+     ```
+
+  3. **Frontend Status**
+     ```bash
+     curl -s http://localhost:3000 | head -n 5
+     ```
+
+  4. **Check Trained Models**
+     ```bash
+     ls -lh models/*/model.json | wc -l
+     ```
+
+  5. **Check ML Feature View**
+     ```sql
+     SELECT COUNT(*) as row_count, MAX(date) as latest_date
+     FROM ml_training_features;
+     ```
+
+  6. **Check Recent Logs**
+     ```bash
+     tail -n 20 logs/*.log
+     ```
+
+  7. **Report Summary**
+     - ✅ or ❌ for each component
+     - Recommend fixes for any issues
+     - Suggest next maintenance tasks

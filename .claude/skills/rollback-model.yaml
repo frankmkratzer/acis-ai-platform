@@ -1,0 +1,168 @@
+name: rollback-model
+description: Safely rollback to a previous model version
+prompt: |
+  Rollback to a previous model version if current production model is underperforming.
+
+  1. **Ask User for Model Information**
+     - Model type: XGBoost (growth/value/dividend/momentum) or RL (ppo)
+     - Market cap: small, mid, large
+     - Reason for rollback
+
+  2. **Check Current Production Model**
+     ```bash
+     # List production model
+     curl -s http://localhost:8000/api/ml-models/production | jq
+     ```
+
+  3. **List Available Model Versions**
+     ```bash
+     # Show all versions with timestamps
+     ls -lhtr models/{strategy}_{marketcap}/
+
+     # For RL models
+     ls -lhtr rl_models/ppo_{strategy}_{marketcap}/
+     ```
+
+  4. **Show Model Metadata**
+     ```bash
+     # Current production model
+     cat models/{strategy}_{marketcap}/metadata.json | jq
+
+     # Previous versions
+     for dir in models/{strategy}_{marketcap}/backup_*; do
+       echo "=== $dir ==="
+       cat $dir/metadata.json | jq '.performance'
+     done
+     ```
+
+  5. **Compare Performance Metrics**
+     ```sql
+     SELECT
+       model_name,
+       deployed_at,
+       spearman_ic,
+       sharpe_ratio,
+       max_drawdown,
+       deployed_by
+     FROM model_deployment_log
+     WHERE model_name LIKE '%{strategy}%{marketcap}%'
+     ORDER BY deployed_at DESC
+     LIMIT 5;
+     ```
+
+  6. **Ask User to Select Version**
+     - Show backup timestamps
+     - Display performance comparison
+     - Confirm rollback target (e.g., "backup_2025-10-15")
+
+  7. **Confirm Rollback**
+     ```
+     ⚠️  ROLLBACK CONFIRMATION
+
+     Current Production: {CURRENT_MODEL} (Sharpe: {SHARPE_CURRENT})
+     Rollback Target: {TARGET_MODEL} (Sharpe: {SHARPE_TARGET})
+
+     Reason: {USER_REASON}
+
+     This will:
+     1. Backup current production model
+     2. Restore {TARGET_MODEL} to production
+     3. Update database records
+     4. Affect future trade recommendations
+
+     Continue? (yes/no)
+     ```
+
+  8. **Execute Rollback**
+     ```bash
+     # Backup current production model
+     timestamp=$(date +%Y-%m-%d_%H-%M-%S)
+     mkdir -p models/{strategy}_{marketcap}/backup_$timestamp
+     cp -r models/{strategy}_{marketcap}/model.json models/{strategy}_{marketcap}/backup_$timestamp/
+     cp -r models/{strategy}_{marketcap}/metadata.json models/{strategy}_{marketcap}/backup_$timestamp/
+
+     # Restore target version
+     cp -r models/{strategy}_{marketcap}/{TARGET_VERSION}/model.json models/{strategy}_{marketcap}/
+     cp -r models/{strategy}_{marketcap}/{TARGET_VERSION}/metadata.json models/{strategy}_{marketcap}/
+     ```
+
+  9. **Update Database Records**
+     ```sql
+     INSERT INTO model_deployment_log (
+       model_name,
+       version,
+       deployed_at,
+       deployed_by,
+       deployment_reason,
+       spearman_ic,
+       sharpe_ratio,
+       is_rollback
+     ) VALUES (
+       '{strategy}_{marketcap}',
+       '{TARGET_VERSION}',
+       NOW(),
+       'admin',
+       'Rollback: {USER_REASON}',
+       {SPEARMAN_IC},
+       {SHARPE_RATIO},
+       TRUE
+     );
+     ```
+
+  10. **Verify Rollback**
+      ```bash
+      # Check production model updated
+      curl -s http://localhost:8000/api/ml-models/production | jq
+
+      # Verify model loads correctly
+      python -c "
+      import xgboost as xgb
+      model = xgb.XGBClassifier()
+      model.load_model('models/{strategy}_{marketcap}/model.json')
+      print('✅ Model loaded successfully')
+      "
+      ```
+
+  11. **Test Rolled-Back Model**
+      ```bash
+      # Run quick prediction test
+      python ml_models/test_model_prediction.py \
+        --model {strategy}_{marketcap} \
+        --test-date $(date +%Y-%m-%d)
+      ```
+
+  12. **Report Rollback Results**
+      ```markdown
+      ✅ Model Rollback Complete
+
+      **Model**: {strategy}_{marketcap}
+      **Rolled back from**: {CURRENT_VERSION} (deployed {CURRENT_DATE})
+      **Rolled back to**: {TARGET_VERSION} (originally deployed {TARGET_DATE})
+      **Reason**: {USER_REASON}
+
+      **Performance Comparison**:
+      - Current Sharpe: {SHARPE_CURRENT} → Target Sharpe: {SHARPE_TARGET}
+      - Current Spearman IC: {IC_CURRENT} → Target IC: {IC_TARGET}
+
+      **Next Steps**:
+      1. ✅ Monitor model performance over next 24-48 hours
+      2. ✅ Review trade recommendations for anomalies
+      3. ✅ Consider retraining if issue persists
+      4. ✅ Document root cause in model_issues.md
+
+      **Backup Location**: models/{strategy}_{marketcap}/backup_{timestamp}
+      ```
+
+  13. **Alert and Monitoring**
+      - Log rollback event
+      - Notify team (if applicable)
+      - Set reminder to review performance in 24 hours
+      - Document issue for post-mortem
+
+  14. **Safety Checks**
+      - ✅ Backup created before rollback
+      - ✅ Target model files exist and valid
+      - ✅ User confirmed rollback
+      - ✅ Database deployment log updated
+      - ✅ Model loads without errors
+      - ⚠️  No trades pending execution (warn if any)

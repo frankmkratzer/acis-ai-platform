@@ -1,0 +1,4 @@
+'use client'
+export default function Rebalancing() {
+  return (<div className="prose prose-blue max-w-none"><h1 className="text-4xl font-bold mb-4">Rebalancing Process</h1><p className="text-xl text-gray-600 mb-8">Complete workflow from drift detection to trade execution.</p><section className="mb-8"><h2 className="text-2xl font-bold mb-4">Automated Daily Rebalancing</h2><p className="text-sm">System checks portfolio drift daily at 9:00 AM. If drift {'>'} 5%, automatic rebalancing initiates.</p></section><section className="mb-8"><h2 className="text-2xl font-bold mb-4">Manual Rebalancing</h2><ol className="text-sm"><li>Navigate to Trading page</li><li>Select client</li><li>Click "Generate Recommendations"</li><li>Review and approve trades</li><li>Execute rebalance</li></ol></section></div>)
+}

@@ -1,0 +1,137 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# MacOS
+.DS_Store
+
+# Machine Learning specific
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.joblib
+*.model
+*.weights
+models/
+checkpoints/
+logs/
+tensorboard/
+mlruns/
+
+# Data files (uncomment if you want to exclude large datasets)
+# *.csv
+# *.parquet
+# *.feather
+# data/
+# datasets/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pre-commit
+.pre-commit-cache/
+
+# Credentials and keys
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+.next/
+node_modules/
+
+# Backup files
+*.bak
+*_backup.*
+*_old_backup.*
+
+# Results and data
+data/results/*.csv
+predictions*.csv
+backtest_results.csv
+feature_importance.csv
+
+# Archive
+logs/archive/
+.env
+.env.sh
+# Node modules should not be in git

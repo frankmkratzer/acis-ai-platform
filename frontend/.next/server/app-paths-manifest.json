@@ -1,0 +1,7 @@
+{
+  "/docs/technical/api/page": "app/docs/technical/api/page.js",
+  "/docs/technical/database/page": "app/docs/technical/database/page.js",
+  "/docs/technical/ml-models/page": "app/docs/technical/ml-models/page.js",
+  "/docs/technical/rl-training/page": "app/docs/technical/rl-training/page.js",
+  "/docs/technical/deployment/page": "app/docs/technical/deployment/page.js"
+}

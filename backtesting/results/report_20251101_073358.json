@@ -1,0 +1,33 @@
+{
+  "period": {
+    "start_date": "2024-01-01",
+    "end_date": "2025-10-27",
+    "total_days": 458,
+    "years": 1.8174603174603174
+  },
+  "returns": {
+    "total_return": 1.3659403637537748,
+    "cagr": 0.6061412891215257,
+    "best_day": 0.05489756609068808,
+    "worst_day": -0.08125685479081257
+  },
+  "risk": {
+    "max_drawdown": -0.1862196010665065,
+    "annual_volatility": 0.2801414151979413,
+    "sharpe_ratio": 1.836993963056607,
+    "sortino_ratio": 2.547162439589039
+  },
+  "trading": {
+    "num_rebalances": 22,
+    "num_trades": 1625,
+    "win_rate": 0.5798687089715536,
+    "avg_positions": 45.59090909090909
+  },
+  "final_state": {
+    "initial_capital": 100000.0,
+    "final_value": 236594.03637537747,
+    "cash": 4562.0792734147535,
+    "positions_value": 232031.95710196273,
+    "num_positions": 49
+  }
+}

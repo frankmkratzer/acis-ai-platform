@@ -1,0 +1,37 @@
+name: refresh-ml-features
+description: Refresh the ML training features materialized view
+prompt: |
+  Refresh the ml_training_features materialized view after data updates.
+
+  1. **Check Current Status**
+     ```sql
+     SELECT
+       schemaname,
+       matviewname,
+       last_refresh,
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||matviewname)) as size
+     FROM pg_matviews
+     WHERE matviewname = 'ml_training_features';
+     ```
+
+  2. **Confirm with User**
+     - Show last refresh time
+     - Warn that refresh may take 5-10 minutes
+     - Ask for confirmation
+
+  3. **Run Refresh**
+     ```sql
+     REFRESH MATERIALIZED VIEW CONCURRENTLY ml_training_features;
+     ```
+
+  4. **Verify Success**
+     ```sql
+     SELECT COUNT(*) as total_rows, MAX(date) as latest_date
+     FROM ml_training_features;
+     ```
+
+  5. **Report Results**
+     - Row count
+     - Latest date in view
+     - Time taken
+     - Recommend retraining models if significant data added

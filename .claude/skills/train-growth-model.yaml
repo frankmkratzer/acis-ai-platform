@@ -1,0 +1,18 @@
+name: train-growth-model
+description: Train a growth strategy XGBoost model with specified market cap segment
+prompt: |
+  Train a growth strategy XGBoost model. Follow these steps:
+
+  1. Ask the user which market cap segment to train (small/mid/large)
+  2. Confirm GPU availability (ask if they want --gpu 0 or CPU)
+  3. Use date range: --start-date 2015-01-01 --end-date 2025-10-30 (or ask for custom range)
+  4. Run the training command:
+     ```bash
+     python ml_models/train_growth_strategy.py --market-cap {MARKET_CAP} {GPU_FLAG}
+     ```
+  5. Monitor the output for:
+     - Spearman IC (target: > 0.08)
+     - Training time
+     - Feature importance top 10
+  6. Report results to user with key metrics
+  7. Ask if they want to promote this model to production
