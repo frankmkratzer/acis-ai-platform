@@ -1,0 +1,58 @@
+services:
+  # MLflow Tracking Server
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    container_name: acis-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      # Backend store (PostgreSQL)
+      MLFLOW_BACKEND_STORE_URI: postgresql://postgres:${DB_PASSWORD:-$@nJose420}@postgres:5432/mlflow
+      # Artifact store (S3 or local)
+      MLFLOW_ARTIFACT_ROOT: ${MLFLOW_ARTIFACT_ROOT:-/mlflow/artifacts}
+      # S3 configuration (optional)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      MLFLOW_S3_ENDPOINT_URL: ${MLFLOW_S3_ENDPOINT_URL:-}
+    command:
+      - sh
+      - -c
+      - |
+        # Wait for postgres
+        until pg_isready -h postgres -p 5432 -U postgres; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+
+        # Create MLflow database if it doesn't exist
+        PGPASSWORD=${DB_PASSWORD:-$@nJose420} psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
+        PGPASSWORD=${DB_PASSWORD:-$@nJose420} psql -h postgres -U postgres -c "CREATE DATABASE mlflow"
+
+        # Start MLflow server
+        mlflow server \
+          --backend-store-uri postgresql://postgres:${DB_PASSWORD:-$@nJose420}@postgres:5432/mlflow \
+          --default-artifact-root ${MLFLOW_ARTIFACT_ROOT:-/mlflow/artifacts} \
+          --host 0.0.0.0 \
+          --port 5000
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - acis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mlflow_artifacts:
+    driver: local
+
+networks:
+  acis-network:
+    external: true

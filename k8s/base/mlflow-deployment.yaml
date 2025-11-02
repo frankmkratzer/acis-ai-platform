@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+  namespace: acis-ai
+  labels:
+    app: mlflow
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP
+    name: http
+  selector:
+    app: mlflow
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: acis-ai
+  labels:
+    app: mlflow
+    component: mlops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+        component: mlops
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:14-alpine
+        command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h postgres -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready"
+      - name: create-mlflow-db
+        image: postgres:14-alpine
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: acis-secrets
+              key: postgres-password
+        command:
+        - sh
+        - -c
+        - |
+          psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
+          psql -h postgres -U postgres -c "CREATE DATABASE mlflow"
+      containers:
+      - name: mlflow
+        image: ghcr.io/mlflow/mlflow:v2.10.0
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: MLFLOW_BACKEND_STORE_URI
+          value: "postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/mlflow"
+        - name: MLFLOW_ARTIFACT_ROOT
+          value: "/mlflow/artifacts"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: acis-secrets
+              key: postgres-password
+        # Optional: S3 configuration
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-secrets
+              key: access-key-id
+              optional: true
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-secrets
+              key: secret-access-key
+              optional: true
+        command:
+        - mlflow
+        - server
+        - --backend-store-uri
+        - postgresql://postgres:$(POSTGRES_PASSWORD)@postgres:5432/mlflow
+        - --default-artifact-root
+        - /mlflow/artifacts
+        - --host
+        - 0.0.0.0
+        - --port
+        - "5000"
+        volumeMounts:
+        - name: mlflow-artifacts
+          mountPath: /mlflow/artifacts
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: mlflow-artifacts
+        persistentVolumeClaim:
+          claimName: mlflow-artifacts-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mlflow-artifacts-pvc
+  namespace: acis-ai
+  labels:
+    app: mlflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 50Gi
