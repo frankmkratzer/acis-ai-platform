@@ -11,7 +11,11 @@ import {
   Database,
   HardDrive,
   Cpu,
-  Activity
+  Activity,
+  Zap,
+  TrendingUp,
+  BarChart3,
+  ExternalLink
 } from 'lucide-react'
 import InlineHelp from '@/components/InlineHelp'
 import Tooltip from '@/components/Tooltip'
@@ -338,6 +342,161 @@ export default function SystemAdminPage() {
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* MLOps Section */}
+      <div className="mb-8">
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">MLOps & Model Management</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Monitor and manage ML models, detect data drift, and trigger automated retraining
+          </p>
+        </div>
+
+        <InlineHelp
+          title="About MLOps Features"
+          variant="info"
+          learnMoreLink="/docs/technical"
+          content={
+            <div className="space-y-2">
+              <p>
+                The MLOps infrastructure provides model lifecycle management, experiment tracking,
+                and automated quality monitoring:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li><strong>MLflow:</strong> Centralized experiment tracking and model registry</li>
+                <li><strong>Drift Detection:</strong> Monitors for changes in data distribution (KS test + PSI)</li>
+                <li><strong>Auto-Retraining:</strong> Automatically retrains models when drift exceeds threshold</li>
+                <li><strong>Model Versioning:</strong> Track and rollback model versions easily</li>
+              </ul>
+            </div>
+          }
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* MLflow Status */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-blue-900">MLflow</h3>
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+            </div>
+            <p className="text-xs text-blue-700 mb-3">
+              Experiment tracking & model registry
+            </p>
+            <a
+              href="http://localhost:5000"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open MLflow UI to view experiments, runs, and model registry. Track all training metrics and compare model versions."
+              className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Open MLflow UI
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+
+          {/* Data Drift Detection */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-purple-900">Data Drift</h3>
+              <TrendingUp className="w-5 h-5 text-purple-600" />
+            </div>
+            <p className="text-xs text-purple-700 mb-3">
+              Monitor distribution changes
+            </p>
+            <button
+              onClick={async () => {
+                if (confirm('Run drift detection for all strategies? This will check if model retraining is needed.')) {
+                  try {
+                    const response = await fetch(`${API_BASE}/api/admin/mlops/drift-check`, {
+                      method: 'POST'
+                    })
+                    if (response.ok) {
+                      const data = await response.json()
+                      alert(`Drift Check Complete!\n\nStrategies analyzed: ${data.strategies_checked}\nDrift detected: ${data.drift_detected}\nRetraining recommended: ${data.retraining_recommended}`)
+                    } else {
+                      alert('Failed to run drift detection')
+                    }
+                  } catch (error) {
+                    alert(`Error: ${error}`)
+                  }
+                }
+              }}
+              title="Check for data drift across all trading strategies. Uses KS test and PSI to detect distribution changes that may require model retraining."
+              className="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors"
+            >
+              Check Drift Now →
+            </button>
+          </div>
+
+          {/* Automated Retraining */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-green-900">Auto-Retrain</h3>
+              <Zap className="w-5 h-5 text-green-600" />
+            </div>
+            <p className="text-xs text-green-700 mb-3">
+              Drift-triggered retraining
+            </p>
+            <button
+              onClick={async () => {
+                if (confirm('Run automated retraining pipeline? This will check drift and retrain models as needed (~30-60 min).')) {
+                  try {
+                    const response = await fetch(`${API_BASE}/api/admin/mlops/auto-retrain`, {
+                      method: 'POST'
+                    })
+                    if (response.ok) {
+                      const data = await response.json()
+                      alert(`Auto-Retraining Started!\n\nJob ID: ${data.job_id}\n\nCheck System Admin for progress.`)
+                    } else {
+                      alert('Failed to start auto-retraining')
+                    }
+                  } catch (error) {
+                    alert(`Error: ${error}`)
+                  }
+                }
+              }}
+              title="Run automated retraining pipeline: checks drift, retrains models if needed, and promotes to production if performance criteria met."
+              className="text-sm font-medium text-green-600 hover:text-green-800 transition-colors"
+            >
+              Run Auto-Retrain →
+            </button>
+          </div>
+
+          {/* Daily Incremental Updates */}
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-orange-900">Incremental Update</h3>
+              <RefreshCw className="w-5 h-5 text-orange-600" />
+            </div>
+            <p className="text-xs text-orange-700 mb-3">
+              Fast fine-tuning (5-10 min)
+            </p>
+            <button
+              onClick={async () => {
+                if (confirm('Run daily incremental update? This fine-tunes models with recent data (~5-10 min).')) {
+                  try {
+                    const response = await fetch(`${API_BASE}/api/admin/mlops/incremental-update`, {
+                      method: 'POST'
+                    })
+                    if (response.ok) {
+                      const data = await response.json()
+                      alert(`Incremental Update Started!\n\nJob ID: ${data.job_id}\n\nCheck logs for progress.`)
+                    } else {
+                      alert('Failed to start incremental update')
+                    }
+                  } catch (error) {
+                    alert(`Error: ${error}`)
+                  }
+                }
+              }}
+              title="Run daily incremental model update: fine-tunes existing models with last 7 days of data. Much faster than full retraining."
+              className="text-sm font-medium text-orange-600 hover:text-orange-800 transition-colors"
+            >
+              Run Update →
+            </button>
+          </div>
         </div>
       </div>
 
